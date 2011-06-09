@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
 public class RedisServer {
+	private static final int DEFAULT_PORT = 6379;
 	/**
 	 * A system property key to specify the path to a {@code redis-server} executable.
 	 */
@@ -17,11 +18,11 @@ public class RedisServer {
 	private final ProcessBuilder processBuilder;
 	private Process process;
 	private boolean started;
-	
+
 	/**
 	 * Creates a new server instance using the {@code redislauncher.command} system property. The property value must be
 	 * a path to a {@code redis-server} executable.
-	 * 
+	 *
 	 * @return a redis server instance
 	 * @throws NullPointerException
 	 *             if the {@code redislauncher.command} system property does not exist
@@ -31,13 +32,13 @@ public class RedisServer {
 		if (command == null) throw new NullPointerException(RedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
 		return new RedisServer(new ProcessBuilder(command));
 	}
-	
+
 	public RedisServer(ProcessBuilder processBuilder) {
 		this.processBuilder = processBuilder;
 	}
 
 	/**
-	 * 
+	 *
 	 * @throws ConnectException
 	 *             if the server could not be started
 	 * @throws IOException
@@ -55,7 +56,7 @@ public class RedisServer {
 		for (int i = 0; i < MAX_CONNECT_ATTEMPTS; i++) {
 			Socket socket = new Socket();
 			try {
-				socket.connect(new InetSocketAddress("localhost", 6379));
+				socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
 				OutputStream os = socket.getOutputStream();
 				os.write("*1\r\n$4\r\nPING\r\n".getBytes("UTF-8"));
 				os.flush();
@@ -71,7 +72,7 @@ public class RedisServer {
 	}
 
 	/**
-	 * 
+	 *
 	 * @throws IOException
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to stop
@@ -80,7 +81,7 @@ public class RedisServer {
 		if (!started) return;
 		Socket socket = new Socket();
 		try {
-			socket.connect(new InetSocketAddress("localhost", 6379));
+			socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
 			OutputStream os = socket.getOutputStream();
 			os.write("*1\r\n$8\r\nSHUTDOWN\r\n".getBytes("UTF-8"));
 			os.flush();
