@@ -21,6 +21,27 @@ public class RedisServerTest {
 	}
 	
 	@Test
+	public void canStartServerInstantiatedUsingSystemProperty() throws IOException, InterruptedException {
+		RedisServer server = RedisServer.newInstance();
+		try {
+			server.start();
+		} finally {
+			server.stop();
+		}
+	}
+	
+	@Test(expected=NullPointerException.class)
+	public void throwsNullPointerExceptionIfSystemPropertyIsAbsentWhenInstantiatingServer() {
+		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
+		try {
+			System.clearProperty(RedisServer.COMMAND_PROPERTY);
+			RedisServer.newInstance();
+		} finally {
+			System.setProperty(RedisServer.COMMAND_PROPERTY, command);
+		}
+	}
+	
+	@Test
 	public void canBeConnectedToOnceStarted() throws IOException, InterruptedException {
 		try {
 			server.start();
@@ -44,8 +65,8 @@ public class RedisServerTest {
 		jedis.shutdown();
 	}
 	
-	@Test(expected=IllegalStateException.class)
-	public void stopThrowsIllegalStateExceptionWhenServerNotStarted() throws IOException, InterruptedException {
+	@Test
+	public void stopDoesNothingWhenServerNotStarted() throws IOException, InterruptedException {
 		server.stop();
 	}
 	
@@ -54,6 +75,16 @@ public class RedisServerTest {
 		try {
 			server.start();
 			server.start();
+		} finally {
+			server.stop();
+		}
+	}
+	
+	@Test(expected=IOException.class)
+	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
+		RedisServer redisServer = new RedisServer(new ProcessBuilder("nonexistent-executable"));
+		try {
+			redisServer.start();
 		} finally {
 			server.stop();
 		}
