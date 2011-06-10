@@ -7,8 +7,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
-public class RedisServer {
+public final class RedisServer {
 	private static final int DEFAULT_PORT = 6379;
+
 	/**
 	 * A system property key to specify the path to a {@code redis-server} executable.
 	 */
@@ -29,7 +30,10 @@ public class RedisServer {
 	 */
 	public static RedisServer newInstance() {
 		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
-		if (command == null) throw new NullPointerException(RedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
+		if (command == null) {
+			throw new NullPointerException(RedisServer.COMMAND_PROPERTY +
+					" system property must be a path to a redis-server executable");
+		}
 		return new RedisServer(new ProcessBuilder(command));
 	}
 
@@ -39,9 +43,8 @@ public class RedisServer {
 
 	/**
 	 *
-	 * @throws ConnectException
-	 *             if the server could not be started
 	 * @throws IOException
+	 *             if the server could not be started
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to start
 	 */
@@ -74,6 +77,7 @@ public class RedisServer {
 	/**
 	 *
 	 * @throws IOException
+	 *             if an error occurs when connecting to the server
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to stop
 	 */
