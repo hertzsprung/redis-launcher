@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
 public final class RedisServer {
@@ -15,10 +16,12 @@ public final class RedisServer {
 	 * A system property key to specify the path to a {@code redis-server} executable.
 	 */
 	public static final String COMMAND_PROPERTY = "redislauncher.command";
-	private static final int MAX_CONNECT_ATTEMPTS = 5;
-	private static final long SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS = 100;
+
+	private static final int DEFAULT_MAX_CONNECT_ATTEMPTS = 5;
+	private static final long DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS = 100;
 	private static final int DEFAULT_MAX_READINESS_ATTEMPTS = 30;
 	private static final long DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS = 1000;
+	private static final byte[] PING_COMMAND = "*1\r\n$4\r\nPING\r\n".getBytes(Charset.forName("UTF-8"));
 
 	private final int maximumReadinessAttempts;
 	private final ProcessBuilder processBuilder;
@@ -53,8 +56,13 @@ public final class RedisServer {
 
 	/**
 	 *
+	 * @throws ConnectException
+	 *             if the server process was started but no connection to it could be made
+	 * @throws ServerNotReadyException
+	 *             if the server process was started but did not respond positively to redis PING commands after a
+	 *             certain time
 	 * @throws IOException
-	 *             if the server could not be started
+	 *             if the server could not be started because the process could not be started
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to start
 	 */
@@ -71,56 +79,35 @@ public final class RedisServer {
 	}
 
 	private Socket tryToConnect() throws IOException, InterruptedException {
-		for (int i = 0; i < MAX_CONNECT_ATTEMPTS; i++) {
+		for (int i = 0; i < DEFAULT_MAX_CONNECT_ATTEMPTS; i++) {
 			Socket socket = new Socket();
 			try {
 				socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
 				return socket;
 			} catch (ConnectException e) {
 				socket.close();
-				TimeUnit.MILLISECONDS.sleep(SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS);
+				TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS);
 			} catch (IOException e) {
 				socket.close();
 			}
 		}
-		throw new ConnectException("Couldn't connect after " + MAX_CONNECT_ATTEMPTS + " attempts");
+
+		throw new ConnectException("Couldn't connect after " + DEFAULT_MAX_CONNECT_ATTEMPTS + " attempts");
 	}
 
 	private void waitForServerReadiness(Socket socket) throws IOException, InterruptedException {
-		OutputStream os = socket.getOutputStream();
-		InputStream is = socket.getInputStream();
-		for (int i=0; i< maximumReadinessAttempts; i++) {
-			os.write("*1\r\n$4\r\nPING\r\n".getBytes("UTF-8"));
-			os.flush();
-			String reply = readReply(is);
-			if (reply.equals("+PONG")) return;
+		OutputStream output = socket.getOutputStream();
+		InputStream input = socket.getInputStream();
+
+		for (int i = 0; i < maximumReadinessAttempts; i++) {
+			output.write(PING_COMMAND);
+			output.flush();
+			if (new Reply(input).parse().equals("+PONG")) return;
 			TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS);
 		}
-		throw new ServerNotReadyException("Server was not ready to accept requests after " + maximumReadinessAttempts + " attempts");
-	}
 
-	private String readReply(InputStream is) throws IOException {
-		StringBuilder builder = new StringBuilder();
-		boolean seenCarriageReturn = false, seenNewline = false;
-		while (!seenCarriageReturn || !seenNewline) { // TODO: should we check for ordering of \r and \n?
-			int i = is.read();
-			if (i == -1) {
-				return builder.toString();
-			}
-
-			char c = (char) i;
-			switch (c) {
-			case '\r':
-				seenCarriageReturn = true;
-				break;
-			case '\n':
-				seenNewline = true;
-				break;
-			default:
-				builder.append(c);
-			}
-		}
-		return builder.toString();
+		throw new ServerNotReadyException("Server was not ready to accept requests after " +
+				maximumReadinessAttempts + " attempts");
 	}
 
 	/**
@@ -145,5 +132,6 @@ public final class RedisServer {
 		started = false;
 	}
 
-	// TODO: need an option to process.destroy() if we can't start connect to the server, or timeout waiting for it to be ready
+	// TODO: need an option to process.destroy() if we can't start connect to the server,
+	// or timeout waiting for it to be ready
 }
