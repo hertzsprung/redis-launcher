@@ -8,7 +8,13 @@ class InputStreamGobbler extends Thread {
 	private final InputStream inputStream;
 	private final byte[] buffer = new byte[BUFFER_SIZE];
 
+	/**
+	 * Create an instance that will gobble from the specified {@code InputStream}.
+	 *
+	 * @param inputStream an {@code InputStream} instance
+	 */
 	public InputStreamGobbler(InputStream inputStream) {
+		if (inputStream == null) throw new NullPointerException("inputStream is null");
 		this.inputStream = inputStream;
 	}
 

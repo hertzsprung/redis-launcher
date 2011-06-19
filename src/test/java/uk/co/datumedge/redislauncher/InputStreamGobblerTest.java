@@ -26,4 +26,9 @@ public class InputStreamGobblerTest {
 			TimeUnit.MILLISECONDS.sleep(10);
 		}
 	}
+
+	@Test(expected=NullPointerException.class)
+	public void instantiatingWithNullInputStreamThrowsNullPointerException() {
+		new InputStreamGobbler(null);
+	}
 }

@@ -48,7 +48,7 @@ public final class RedisServer {
 		return new Builder(new ProcessBuilder(command)).build();
 	}
 
-	public RedisServer(ProcessBuilder processBuilder, int maximumReadinessAttempts, int shutdownTimeoutMillis) {
+	private RedisServer(ProcessBuilder processBuilder, int maximumReadinessAttempts, int shutdownTimeoutMillis) {
 		this.processBuilder = processBuilder;
 		this.maximumReadinessAttempts = maximumReadinessAttempts;
 		this.shutdownTimeoutMillis = shutdownTimeoutMillis;
@@ -144,7 +144,7 @@ public final class RedisServer {
 					shutdownTimeoutMillis,
 					TimeUnit.MILLISECONDS);
 
-			try{
+			try {
 				process.waitFor();
 			} finally {
 				interrupter.cancel(false);
