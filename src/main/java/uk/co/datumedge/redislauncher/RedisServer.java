@@ -7,6 +7,9 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public final class RedisServer {
@@ -19,11 +22,11 @@ public final class RedisServer {
 
 	private static final int DEFAULT_MAX_CONNECT_ATTEMPTS = 5;
 	private static final long DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS = 100;
-	private static final int DEFAULT_MAX_READINESS_ATTEMPTS = 30;
 	private static final long DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS = 1000;
 	private static final byte[] PING_COMMAND = "*1\r\n$4\r\nPING\r\n".getBytes(Charset.forName("UTF-8"));
 
 	private final int maximumReadinessAttempts;
+	private final int shutdownTimeoutMillis;
 	private final ProcessBuilder processBuilder;
 	private Process process;
 	private boolean started;
@@ -42,16 +45,13 @@ public final class RedisServer {
 			throw new NullPointerException(RedisServer.COMMAND_PROPERTY +
 					" system property must be a path to a redis-server executable");
 		}
-		return new RedisServer(new ProcessBuilder(command));
+		return new Builder(new ProcessBuilder(command)).build();
 	}
 
-	public RedisServer(ProcessBuilder processBuilder) {
-		this(processBuilder, DEFAULT_MAX_READINESS_ATTEMPTS);
-	}
-
-	public RedisServer(ProcessBuilder processBuilder, int maximumReadinessAttempts) {
+	public RedisServer(ProcessBuilder processBuilder, int maximumReadinessAttempts, int shutdownTimeoutMillis) {
 		this.processBuilder = processBuilder;
 		this.maximumReadinessAttempts = maximumReadinessAttempts;
+		this.shutdownTimeoutMillis = shutdownTimeoutMillis;
 	}
 
 	/**
@@ -131,9 +131,37 @@ public final class RedisServer {
 		} finally {
 			socket.close();
 		}
-		process.waitFor();
-		destroy();
+		waitForProcessShutdown();
+		process.destroy();
 		started = false;
+	}
+
+	private void waitForProcessShutdown() throws InterruptedException {
+		ScheduledExecutorService timerPool = Executors.newScheduledThreadPool(1);
+		try {
+			ScheduledFuture<?> interrupter = timerPool.schedule(
+					createInterrupterFor(Thread.currentThread()),
+					shutdownTimeoutMillis,
+					TimeUnit.MILLISECONDS);
+
+			try{
+				process.waitFor();
+			} finally {
+				interrupter.cancel(false);
+				Thread.interrupted();
+			}
+		} finally {
+			timerPool.shutdown();
+		}
+	}
+
+	private Runnable createInterrupterFor(final Thread threadToInterrupt) {
+		return new Runnable() {
+			@Override
+			public void run() {
+				threadToInterrupt.interrupt();
+			}
+		};
 	}
 
 	/**
@@ -141,5 +169,29 @@ public final class RedisServer {
 	 */
 	public void destroy() {
 		process.destroy();
+	}
+
+	public static final class Builder {
+		private final ProcessBuilder processBuilder;
+		private int maximumReadinessAttempts = 5;
+		private int shutdownTimeoutMillis = 10000;
+
+		public Builder(ProcessBuilder processBuilder) {
+			this.processBuilder = processBuilder;
+		}
+
+		public Builder withMaximumReadinessAttempts(int maximumReadinessAttempts) {
+			this.maximumReadinessAttempts = maximumReadinessAttempts;
+			return this;
+		}
+
+		public Builder withShutdownTimeoutMillis(int shutdownTimeoutMillis) {
+			this.shutdownTimeoutMillis = shutdownTimeoutMillis;
+			return this;
+		}
+
+		public RedisServer build() {
+			return new RedisServer(processBuilder, maximumReadinessAttempts, shutdownTimeoutMillis);
+		}
 	}
 }

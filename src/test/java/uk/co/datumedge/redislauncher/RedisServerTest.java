@@ -28,7 +28,7 @@ public class RedisServerTest {
 		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
 		if (command == null) Assert.fail(RedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
 		processBuilder = new ProcessBuilder(command);
-		server = new RedisServer(processBuilder);
+		server = new RedisServer.Builder(processBuilder).build();
 	}
 
 	@Before
@@ -120,7 +120,7 @@ public class RedisServerTest {
 
 	@Test(expected=IOException.class)
 	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
-		RedisServer redisServer = new RedisServer(new ProcessBuilder("nonexistent-executable"));
+		RedisServer redisServer = new RedisServer.Builder(new ProcessBuilder("nonexistent-executable")).build();
 		try {
 			redisServer.start();
 		} finally {
@@ -130,7 +130,7 @@ public class RedisServerTest {
 
 	@Test(expected=ConnectException.class)
 	public void throwsConnectExceptionIfUnableToConnect() throws InterruptedException, IOException {
-		RedisServer redisServer = new RedisServer(new ProcessBuilder("java"));
+		RedisServer redisServer = new RedisServer.Builder(new ProcessBuilder("java")).build();
 		try {
 			redisServer.start();
 		} finally {
@@ -176,7 +176,9 @@ public class RedisServerTest {
 	public void throwsServerNotReadyExceptionIfNotReadyToAcceptRequestsBeforeTimeout() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer(processBuilder, 1);
+		RedisServer server = new RedisServer.Builder(processBuilder)
+				.withMaximumReadinessAttempts(1)
+				.build();
 		try {
 			server.start();
 		} finally {
@@ -205,7 +207,9 @@ public class RedisServerTest {
 	public void canBeDestroyedWhenServerIsStartedButNotReadyToAcceptRequests() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer(processBuilder, 1);
+		RedisServer server = new RedisServer.Builder(processBuilder)
+				.withMaximumReadinessAttempts(1)
+				.build();
 		try {
 			server.start();
 			fail("Did not thrown ServerNotReadyException");
@@ -224,6 +228,24 @@ public class RedisServerTest {
 			}
 		} finally {
 			jedis.disconnect();
+		}
+	}
+
+	@Test(expected=InterruptedException.class)
+	public void throwsInterruptedExceptionIfWaitingForProcessExitTimesOut() throws IOException, InterruptedException {
+		populateServerWithLargeDataSet();
+
+		RedisServer server = new RedisServer.Builder(processBuilder)
+				.withShutdownTimeoutMillis(1)
+				.build();
+		try {
+			server.start();
+		} finally {
+			try {
+				server.stop();
+			} finally {
+				server.destroy();
+			}
 		}
 	}
 
