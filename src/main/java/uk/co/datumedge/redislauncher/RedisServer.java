@@ -55,6 +55,7 @@ public final class RedisServer {
 	}
 
 	/**
+	 * Start a redis server and block until it is ready to accept requests.
 	 *
 	 * @throws ConnectException
 	 *             if the server process was started but no connection to it could be made
@@ -67,8 +68,10 @@ public final class RedisServer {
 	 *             if interrupted while waiting to start
 	 */
 	public void start() throws IOException, InterruptedException {
-		if (started) throw new IllegalStateException("Server has already been started");
+		if (started) return;
 		process = processBuilder.start();
+		new InputStreamGobbler(process.getInputStream()).start();
+		new InputStreamGobbler(process.getErrorStream()).start();
 		Socket socket = tryToConnect();
 		started = true;
 		try {
@@ -129,9 +132,14 @@ public final class RedisServer {
 			socket.close();
 		}
 		process.waitFor();
+		destroy();
 		started = false;
 	}
 
-	// TODO: need an option to process.destroy() if we can't start connect to the server,
-	// or timeout waiting for it to be ready
+	/**
+	 * Forcibly terminate the redis server.
+	 */
+	public void destroy() {
+		process.destroy();
+	}
 }

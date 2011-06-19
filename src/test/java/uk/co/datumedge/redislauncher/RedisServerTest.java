@@ -108,8 +108,8 @@ public class RedisServerTest {
 		server.stop();
 	}
 
-	@Test(expected=IllegalStateException.class)
-	public void startThrowsIllegalStateExceptionWhenServerAlreadyStarted() throws IOException, InterruptedException {
+	@Test
+	public void startDoesNothingWhenServerAlreadyStarted() throws IOException, InterruptedException {
 		try {
 			server.start();
 			server.start();
@@ -177,13 +177,9 @@ public class RedisServerTest {
 		populateServerWithLargeDataSet();
 
 		RedisServer server = new RedisServer(processBuilder, 1);
-		Jedis jedis = null;
 		try {
 			server.start();
-			jedis = new Jedis("localhost");
-			assertThat(jedis.get("RedisServerTestKey0_0"), is(equalTo("value")));
 		} finally {
-			if (jedis != null) jedis.disconnect();
 			waitForServerToAcceptRequests();
 			server.stop();
 		}
@@ -199,6 +195,32 @@ public class RedisServerTest {
 				} catch (JedisDataException e) {
 					// ignore
 				}
+			}
+		} finally {
+			jedis.disconnect();
+		}
+	}
+
+	@Test(expected=JedisConnectionException.class)
+	public void canBeDestroyedWhenServerIsStartedButNotReadyToAcceptRequests() throws IOException, InterruptedException {
+		populateServerWithLargeDataSet();
+
+		RedisServer server = new RedisServer(processBuilder, 1);
+		try {
+			server.start();
+			fail("Did not thrown ServerNotReadyException");
+		} catch (ServerNotReadyException e) {
+			server.destroy();
+			pingForOneSecond();
+		}
+	}
+
+	private void pingForOneSecond() throws InterruptedException {
+		Jedis jedis = new Jedis("localhost");
+		try {
+			for (int i=0; i<10; i++) {
+				jedis.ping();
+				TimeUnit.MILLISECONDS.sleep(100);
 			}
 		} finally {
 			jedis.disconnect();
