@@ -20,12 +20,12 @@ public final class RedisServer {
 	 */
 	public static final String COMMAND_PROPERTY = "redislauncher.command";
 
-	private static final int DEFAULT_MAX_CONNECT_ATTEMPTS = 5;
 	private static final long DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS = 100;
 	private static final long DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS = 1000;
 	private static final byte[] PING_COMMAND = "*1\r\n$4\r\nPING\r\n".getBytes(Charset.forName("UTF-8"));
+	private static final LifecyclePolicy DEFAULT_LIFECYCLE_POLICY = new KeepRunningOnErrorLifecyclePolicy();
 
-	private final KeepRunningOnErrorLifecyclePolicy lifecyclePolicy;
+	private final LifecyclePolicy lifecyclePolicy;
 	private final ProcessBuilder processBuilder;
 	private Process process;
 	private boolean started;
@@ -44,13 +44,18 @@ public final class RedisServer {
 			throw new NullPointerException(RedisServer.COMMAND_PROPERTY +
 					" system property must be a path to a redis-server executable");
 		}
-		return new Builder(new ProcessBuilder(command)).build();
+		return new RedisServer(new ProcessBuilder(command));
 	}
 
-	private RedisServer(ProcessBuilder processBuilder, KeepRunningOnErrorLifecyclePolicy lifecyclePolicy) {
+	public RedisServer(ProcessBuilder processBuilder) {
+		this(processBuilder, DEFAULT_LIFECYCLE_POLICY);
+	}
+
+	public RedisServer(ProcessBuilder processBuilder, LifecyclePolicy lifecyclePolicy) {
 		this.processBuilder = processBuilder;
 		this.lifecyclePolicy = lifecyclePolicy;
 	}
+
 
 	/**
 	 * Start a redis server and block until it is ready to accept requests.
@@ -80,7 +85,7 @@ public final class RedisServer {
 	}
 
 	private Socket tryToConnect() throws IOException, InterruptedException {
-		for (int i = 0; i < DEFAULT_MAX_CONNECT_ATTEMPTS; i++) {
+		for (int i = 0; i < lifecyclePolicy.getMaximumConnectionAttempts(); i++) {
 			Socket socket = new Socket();
 			try {
 				socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
@@ -93,7 +98,9 @@ public final class RedisServer {
 			}
 		}
 
-		throw new ConnectException("Couldn't connect after " + DEFAULT_MAX_CONNECT_ATTEMPTS + " attempts");
+		lifecyclePolicy.failedToConnect(this);
+		throw new ConnectException("Couldn't connect after " +
+				lifecyclePolicy.getMaximumConnectionAttempts() + " attempts");
 	}
 
 	private void waitForServerReadiness(Socket socket) throws IOException, InterruptedException {
@@ -107,6 +114,7 @@ public final class RedisServer {
 			TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS);
 		}
 
+		lifecyclePolicy.serverNotReady(this);
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
 				lifecyclePolicy.getMaximumReadinessAttempts() + " attempts");
 	}
@@ -167,24 +175,5 @@ public final class RedisServer {
 	 */
 	public void destroy() {
 		process.destroy();
-	}
-
-	public static final class Builder {
-		private static final KeepRunningOnErrorLifecyclePolicy DEFAULT_POLICY = new KeepRunningOnErrorLifecyclePolicy(5, 10000);
-		private final ProcessBuilder processBuilder;
-		private KeepRunningOnErrorLifecyclePolicy lifecyclePolicy = DEFAULT_POLICY;
-
-		public Builder(ProcessBuilder processBuilder) {
-			this.processBuilder = processBuilder;
-		}
-
-		public Builder withLifecyclePolicy(KeepRunningOnErrorLifecyclePolicy lifecyclePolicy) {
-			this.lifecyclePolicy  = lifecyclePolicy;
-			return this;
-		}
-
-		public RedisServer build() {
-			return new RedisServer(processBuilder, lifecyclePolicy);
-		}
 	}
 }

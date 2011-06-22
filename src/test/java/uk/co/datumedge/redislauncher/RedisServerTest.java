@@ -2,25 +2,36 @@ package uk.co.datumedge.redislauncher;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS;
+import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
+import org.jmock.Expectations;
+import org.jmock.Mockery;
+import org.jmock.integration.junit4.JMock;
+import org.jmock.integration.junit4.JUnit4Mockery;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisDataException;
 
+@RunWith(JMock.class)
 public class RedisServerTest {
 	private static final int TIMEOUT = 60000;
+	private final Mockery context = new JUnit4Mockery();
+	private final LifecyclePolicy mockLifecyclePolicy = context.mock(LifecyclePolicy.class);
 	private final RedisServer server;
 	private final ProcessBuilder processBuilder;
 
@@ -28,7 +39,7 @@ public class RedisServerTest {
 		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
 		if (command == null) Assert.fail(RedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
 		processBuilder = new ProcessBuilder(command);
-		server = new RedisServer.Builder(processBuilder).build();
+		server = new RedisServer(processBuilder);
 	}
 
 	@Before
@@ -120,19 +131,42 @@ public class RedisServerTest {
 
 	@Test(expected=IOException.class)
 	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
-		RedisServer redisServer = new RedisServer.Builder(new ProcessBuilder("nonexistent-executable")).build();
+		RedisServer server = new RedisServer(new ProcessBuilder("nonexistent-executable"));
 		try {
-			redisServer.start();
+			server.start();
 		} finally {
 			server.stop();
 		}
 	}
 
 	@Test(expected=ConnectException.class)
-	public void throwsConnectExceptionIfUnableToConnect() throws InterruptedException, IOException {
-		RedisServer redisServer = new RedisServer.Builder(new ProcessBuilder("java")).build();
+	public void throwsConnectExceptionIfFailedToConnect() throws InterruptedException, IOException {
+		RedisServer server = new RedisServer(new ProcessBuilder("java"));
+
 		try {
-			redisServer.start();
+			server.start();
+		} finally {
+			try {
+				server.stop();
+			} catch (IOException e) {
+				// ignore
+			}
+		}
+	}
+
+	@Test
+	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
+		final RedisServer server = new RedisServer(new ProcessBuilder("java"), mockLifecyclePolicy);
+
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(1));
+			oneOf(mockLifecyclePolicy).failedToConnect(with(sameInstance(server)));
+		}});
+
+		try {
+			server.start();
+		} catch (ConnectException e) {
+			// expected
 		} finally {
 			try {
 				server.stop();
@@ -173,12 +207,36 @@ public class RedisServerTest {
 	}
 
 	@Test(expected=ServerNotReadyException.class, timeout=TIMEOUT)
-	public void throwsServerNotReadyExceptionIfNotReadyToAcceptRequestsBeforeTimeout() throws IOException, InterruptedException {
+	public void throwsServerNotReadyExceptionWhenNotReadyToAcceptRequestsAfterTimeout() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
 		RedisServer server = redisServerWithOnlyOneReadinessAttempt();
 		try {
 			server.start();
+		} finally {
+			waitForServerToAcceptRequests();
+			server.stop();
+		}
+	}
+
+	@Test(timeout=TIMEOUT)
+	public void callsLifecyclePolicyWhenNotReadyToAcceptRequestsAfterTimeout() throws IOException, InterruptedException {
+		populateServerWithLargeDataSet();
+
+		final RedisServer server = new RedisServer(processBuilder, mockLifecyclePolicy);
+
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
+			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(1));
+			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
+
+			oneOf(mockLifecyclePolicy).serverNotReady(with(sameInstance(server)));
+		}});
+
+		try {
+			server.start();
+		} catch (ServerNotReadyException e) {
+			// expected
 		} finally {
 			waitForServerToAcceptRequests();
 			server.stop();
@@ -211,22 +269,27 @@ public class RedisServerTest {
 			fail("Did not thrown ServerNotReadyException");
 		} catch (ServerNotReadyException e) {
 			server.destroy();
-			pingForOneSecond();
+			pingForFiveSeconds();
 		}
 	}
 
 	private RedisServer redisServerWithOnlyOneReadinessAttempt() {
-		RedisServer server = new RedisServer.Builder(processBuilder)
-				.withLifecyclePolicy(new KeepRunningOnErrorLifecyclePolicy(1, 10000))
-				.build();
-		return server;
+		return new RedisServer(
+				processBuilder,
+				new KeepRunningOnErrorLifecyclePolicy.Builder()
+						.withMaximumReadinessAttempts(1)
+						.build());
 	}
 
-	private void pingForOneSecond() throws InterruptedException {
+	private void pingForFiveSeconds() throws InterruptedException {
 		Jedis jedis = new Jedis("localhost");
 		try {
-			for (int i=0; i<10; i++) {
-				jedis.ping();
+			for (int i=0; i<50; i++) {
+				try {
+					jedis.ping();
+				} catch (JedisDataException e) {
+					// ignored
+				}
 				TimeUnit.MILLISECONDS.sleep(100);
 			}
 		} finally {
@@ -234,13 +297,15 @@ public class RedisServerTest {
 		}
 	}
 
-	@Test(expected=InterruptedException.class)
+	@Test(expected=InterruptedException.class, timeout=TIMEOUT)
 	public void throwsInterruptedExceptionIfWaitingForProcessExitTimesOut() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer.Builder(processBuilder)
-				.withLifecyclePolicy(new KeepRunningOnErrorLifecyclePolicy(5, 1))
-				.build();
+		RedisServer server = new RedisServer(
+				processBuilder,
+				new KeepRunningOnErrorLifecyclePolicy.Builder()
+						.withShutdownTimeoutMillis(1)
+						.build());
 		try {
 			server.start();
 		} finally {
