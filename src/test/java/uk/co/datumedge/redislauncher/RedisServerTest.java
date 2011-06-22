@@ -176,9 +176,7 @@ public class RedisServerTest {
 	public void throwsServerNotReadyExceptionIfNotReadyToAcceptRequestsBeforeTimeout() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer.Builder(processBuilder)
-				.withMaximumReadinessAttempts(1)
-				.build();
+		RedisServer server = redisServerWithOnlyOneReadinessAttempt();
 		try {
 			server.start();
 		} finally {
@@ -207,9 +205,7 @@ public class RedisServerTest {
 	public void canBeDestroyedWhenServerIsStartedButNotReadyToAcceptRequests() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer.Builder(processBuilder)
-				.withMaximumReadinessAttempts(1)
-				.build();
+		RedisServer server = redisServerWithOnlyOneReadinessAttempt();
 		try {
 			server.start();
 			fail("Did not thrown ServerNotReadyException");
@@ -217,6 +213,13 @@ public class RedisServerTest {
 			server.destroy();
 			pingForOneSecond();
 		}
+	}
+
+	private RedisServer redisServerWithOnlyOneReadinessAttempt() {
+		RedisServer server = new RedisServer.Builder(processBuilder)
+				.withLifecyclePolicy(new KeepRunningOnErrorLifecyclePolicy(1, 10000))
+				.build();
+		return server;
 	}
 
 	private void pingForOneSecond() throws InterruptedException {
@@ -236,7 +239,7 @@ public class RedisServerTest {
 		populateServerWithLargeDataSet();
 
 		RedisServer server = new RedisServer.Builder(processBuilder)
-				.withShutdownTimeoutMillis(1)
+				.withLifecyclePolicy(new KeepRunningOnErrorLifecyclePolicy(5, 1))
 				.build();
 		try {
 			server.start();

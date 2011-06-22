@@ -25,8 +25,7 @@ public final class RedisServer {
 	private static final long DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS = 1000;
 	private static final byte[] PING_COMMAND = "*1\r\n$4\r\nPING\r\n".getBytes(Charset.forName("UTF-8"));
 
-	private final int maximumReadinessAttempts;
-	private final int shutdownTimeoutMillis;
+	private final KeepRunningOnErrorLifecyclePolicy lifecyclePolicy;
 	private final ProcessBuilder processBuilder;
 	private Process process;
 	private boolean started;
@@ -48,10 +47,9 @@ public final class RedisServer {
 		return new Builder(new ProcessBuilder(command)).build();
 	}
 
-	private RedisServer(ProcessBuilder processBuilder, int maximumReadinessAttempts, int shutdownTimeoutMillis) {
+	private RedisServer(ProcessBuilder processBuilder, KeepRunningOnErrorLifecyclePolicy lifecyclePolicy) {
 		this.processBuilder = processBuilder;
-		this.maximumReadinessAttempts = maximumReadinessAttempts;
-		this.shutdownTimeoutMillis = shutdownTimeoutMillis;
+		this.lifecyclePolicy = lifecyclePolicy;
 	}
 
 	/**
@@ -102,7 +100,7 @@ public final class RedisServer {
 		OutputStream output = socket.getOutputStream();
 		InputStream input = socket.getInputStream();
 
-		for (int i = 0; i < maximumReadinessAttempts; i++) {
+		for (int i = 0; i < lifecyclePolicy.getMaximumReadinessAttempts(); i++) {
 			output.write(PING_COMMAND);
 			output.flush();
 			if (new Reply(input).parse().equals("+PONG")) return;
@@ -110,7 +108,7 @@ public final class RedisServer {
 		}
 
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
-				maximumReadinessAttempts + " attempts");
+				lifecyclePolicy.getMaximumReadinessAttempts() + " attempts");
 	}
 
 	/**
@@ -141,7 +139,7 @@ public final class RedisServer {
 		try {
 			ScheduledFuture<?> interrupter = timerPool.schedule(
 					createInterrupterFor(Thread.currentThread()),
-					shutdownTimeoutMillis,
+					lifecyclePolicy.getShutdownTimeoutMillis(),
 					TimeUnit.MILLISECONDS);
 
 			try {
@@ -172,26 +170,21 @@ public final class RedisServer {
 	}
 
 	public static final class Builder {
+		private static final KeepRunningOnErrorLifecyclePolicy DEFAULT_POLICY = new KeepRunningOnErrorLifecyclePolicy(5, 10000);
 		private final ProcessBuilder processBuilder;
-		private int maximumReadinessAttempts = 5;
-		private int shutdownTimeoutMillis = 10000;
+		private KeepRunningOnErrorLifecyclePolicy lifecyclePolicy = DEFAULT_POLICY;
 
 		public Builder(ProcessBuilder processBuilder) {
 			this.processBuilder = processBuilder;
 		}
 
-		public Builder withMaximumReadinessAttempts(int maximumReadinessAttempts) {
-			this.maximumReadinessAttempts = maximumReadinessAttempts;
-			return this;
-		}
-
-		public Builder withShutdownTimeoutMillis(int shutdownTimeoutMillis) {
-			this.shutdownTimeoutMillis = shutdownTimeoutMillis;
+		public Builder withLifecyclePolicy(KeepRunningOnErrorLifecyclePolicy lifecyclePolicy) {
+			this.lifecyclePolicy  = lifecyclePolicy;
 			return this;
 		}
 
 		public RedisServer build() {
-			return new RedisServer(processBuilder, maximumReadinessAttempts, shutdownTimeoutMillis);
+			return new RedisServer(processBuilder, lifecyclePolicy);
 		}
 	}
 }
