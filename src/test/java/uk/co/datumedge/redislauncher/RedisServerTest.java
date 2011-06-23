@@ -13,10 +13,20 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.JMException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
 import org.jmock.integration.junit4.JUnit4Mockery;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,22 +44,21 @@ public class RedisServerTest {
 	private final LifecyclePolicy mockLifecyclePolicy = context.mock(LifecyclePolicy.class);
 	private final RedisServer server;
 	private final ProcessBuilder processBuilder;
+	private final MBeanServer mBeanServer = MBeanServerFactory.newMBeanServer();
+	private final ObjectName objectName;
 
-	public RedisServerTest() {
+	public RedisServerTest() throws MalformedObjectNameException {
 		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
 		if (command == null) Assert.fail(RedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
 		processBuilder = new ProcessBuilder(command);
 		server = new RedisServer(processBuilder);
+		objectName = new ObjectName("uk.co.datumedge.redislauncher:type=RedisServer,name=Test");
 	}
 
 	@Before
 	public void setup() {
 		checkServerIsStopped();
 		deleteDatastore();
-	}
-
-	private void deleteDatastore() {
-		new File("dump.rdb").delete();
 	}
 
 	private void checkServerIsStopped() {
@@ -62,6 +71,19 @@ public class RedisServerTest {
 			// expected
 		} finally {
 			if (jedis != null) jedis.disconnect();
+		}
+	}
+
+	private void deleteDatastore() {
+		new File("dump.rdb").delete();
+	}
+
+	@After
+	public void stopAndDestroyServer() throws IOException, InterruptedException {
+		try {
+			server.stop();
+		} finally {
+			server.destroy();
 		}
 	}
 
@@ -88,16 +110,13 @@ public class RedisServerTest {
 
 	@Test
 	public void canBeConnectedToOnceStarted() throws IOException, InterruptedException {
+		Jedis jedis = null;
 		try {
 			server.start();
-			Jedis jedis = new Jedis("localhost");
+			jedis = new Jedis("localhost");
 			assertThat(jedis.ping(), is("PONG"));
 		} finally {
-			try {
-				server.stop();
-			} catch (IOException e) {
-				// ignore
-			}
+			jedis.disconnect();
 		}
 	}
 
@@ -105,13 +124,7 @@ public class RedisServerTest {
 	public void cannotBeConnectedToOnceStopped() throws IOException, InterruptedException {
 		server.start();
 		server.stop();
-		Jedis jedis = new Jedis("localhost");
-		try {
-			jedis.ping();
-			jedis.shutdown();
-		} finally {
-			jedis.disconnect();
-		}
+		pingServer();
 	}
 
 	@Test
@@ -121,12 +134,8 @@ public class RedisServerTest {
 
 	@Test
 	public void startDoesNothingWhenServerAlreadyStarted() throws IOException, InterruptedException {
-		try {
-			server.start();
-			server.start();
-		} finally {
-			server.stop();
-		}
+		server.start();
+		server.start();
 	}
 
 	@Test(expected=IOException.class)
@@ -178,17 +187,9 @@ public class RedisServerTest {
 
 	@Test
 	public void canStartServerAgainAfterServerIsStopped() throws IOException, InterruptedException {
-		try {
-			server.start();
-			server.stop();
-			server.start();
-		} finally {
-			try {
-				server.stop();
-			} catch (IOException e) {
-				// ignored
-			}
-		}
+		server.start();
+		server.stop();
+		server.start();
 	}
 
 	@Test(timeout=TIMEOUT)
@@ -202,7 +203,6 @@ public class RedisServerTest {
 			assertThat(jedis.get("RedisServerTestKey0_0"), is(equalTo("value")));
 		} finally {
 			if (jedis != null) jedis.disconnect();
-			server.stop();
 		}
 	}
 
@@ -257,6 +257,11 @@ public class RedisServerTest {
 		} finally {
 			jedis.disconnect();
 		}
+	}
+
+	@Test
+	public void destroyDoesNothingIfServerNotStarted() {
+		server.destroy();
 	}
 
 	@Test(expected=JedisConnectionException.class)
@@ -333,5 +338,45 @@ public class RedisServerTest {
 			if (jedis != null) jedis.disconnect();
 			server.stop();
 		}
+	}
+
+	@Test
+	public void serverCanBeStartedUsingJmx() throws JMException, IOException, InterruptedException {
+		mBeanServer.registerMBean(server, objectName);
+
+		Jedis jedis = null;
+		try {
+			invokeMBeanOperation("start");
+			jedis = new Jedis("localhost");
+			assertThat(jedis.ping(), is("PONG"));
+		} finally {
+			jedis.disconnect();
+			server.stop();
+		}
+	}
+
+	@Test(expected=JedisConnectionException.class)
+	public void serverCanBeStoppedUsingJmx() throws JMException, IOException, InterruptedException {
+		mBeanServer.registerMBean(server, objectName);
+
+		try {
+			server.start();
+		} finally {
+			invokeMBeanOperation("stop");
+			pingServer();
+		}
+	}
+
+	private void pingServer() {
+		Jedis jedis = new Jedis("localhost");
+		try {
+			jedis.ping();
+		} finally {
+			jedis.disconnect();
+		}
+	}
+
+	private void invokeMBeanOperation(String operation) throws ReflectionException, InstanceNotFoundException, MBeanException {
+		mBeanServer.invoke(objectName, operation, new Object[0], new String[0]);
 	}
 }

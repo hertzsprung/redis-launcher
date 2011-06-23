@@ -12,7 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public final class RedisServer {
+public final class RedisServer implements RedisServerMBean {
 	private static final int DEFAULT_PORT = 6379;
 
 	/**
@@ -70,6 +70,7 @@ public final class RedisServer {
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to start
 	 */
+	@Override
 	public void start() throws IOException, InterruptedException {
 		if (started) return;
 		process = processBuilder.start();
@@ -126,6 +127,7 @@ public final class RedisServer {
 	 * @throws InterruptedException
 	 *             if interrupted while waiting to stop
 	 */
+	@Override
 	public void stop() throws IOException, InterruptedException {
 		if (!started) return;
 		Socket socket = new Socket();
@@ -174,6 +176,6 @@ public final class RedisServer {
 	 * Forcibly terminate the redis server.
 	 */
 	public void destroy() {
-		process.destroy();
+		if (process != null) process.destroy();
 	}
 }
