@@ -6,6 +6,7 @@ import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS;
+import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_READINESS_ATTEMPTS;
 import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
 
 import java.io.File;
@@ -302,15 +303,18 @@ public class RedisServerTest {
 		}
 	}
 
-	@Test(expected=InterruptedException.class, timeout=TIMEOUT)
-	public void throwsInterruptedExceptionIfWaitingForProcessExitTimesOut() throws IOException, InterruptedException {
+	@Test(timeout=TIMEOUT)
+	public void callsLifecyclePolicyIfWaitingForProcessExitTimesOut() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = new RedisServer(
-				processBuilder,
-				new KeepRunningOnErrorLifecyclePolicy.Builder()
-						.withShutdownTimeoutMillis(1)
-						.build());
+		final RedisServer server = new RedisServer(processBuilder, mockLifecyclePolicy);
+
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
+			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
+			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
+			oneOf(mockLifecyclePolicy).failedToShutdown(server);
+		}});
 		try {
 			server.start();
 		} finally {

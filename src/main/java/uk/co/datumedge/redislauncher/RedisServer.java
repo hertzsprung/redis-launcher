@@ -124,11 +124,9 @@ public final class RedisServer implements RedisServerMBean {
 	 *
 	 * @throws IOException
 	 *             if an error occurs when connecting to the server
-	 * @throws InterruptedException
-	 *             if interrupted while waiting to stop
 	 */
 	@Override
-	public void stop() throws IOException, InterruptedException {
+	public void stop() throws IOException {
 		if (!started) return;
 		Socket socket = new Socket();
 		try {
@@ -144,7 +142,7 @@ public final class RedisServer implements RedisServerMBean {
 		started = false;
 	}
 
-	private void waitForProcessShutdown() throws InterruptedException {
+	private void waitForProcessShutdown() throws IOException {
 		ScheduledExecutorService timerPool = Executors.newScheduledThreadPool(1);
 		try {
 			ScheduledFuture<?> interrupter = timerPool.schedule(
@@ -154,6 +152,8 @@ public final class RedisServer implements RedisServerMBean {
 
 			try {
 				process.waitFor();
+			} catch (InterruptedException e) {
+				lifecyclePolicy.failedToShutdown(this);
 			} finally {
 				interrupter.cancel(false);
 				Thread.interrupted();

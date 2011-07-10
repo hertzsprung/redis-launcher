@@ -1,5 +1,7 @@
 package uk.co.datumedge.redislauncher;
 
+import java.io.IOException;
+
 import org.junit.Test;
 
 public class KeepRunningOnErrorLifecyclePolicyTest {
@@ -14,5 +16,10 @@ public class KeepRunningOnErrorLifecyclePolicyTest {
 	@Test
 	public void doesNothingWhenRedisServerNotReady() {
 		lifecyclePolicy.serverNotReady(IGNORED_REDIS_SERVER);
+	}
+
+	@Test(expected=IOException.class)
+	public void throwsIOExceptionWhenRedisServerFailedToShutdown() throws IOException {
+		lifecyclePolicy.failedToShutdown(IGNORED_REDIS_SERVER);
 	}
 }
