@@ -134,6 +134,8 @@ public final class RedisServer implements RedisServerMBean {
 			OutputStream os = socket.getOutputStream();
 			os.write("*1\r\n$8\r\nSHUTDOWN\r\n".getBytes("UTF-8"));
 			os.flush();
+		} catch (IOException e) {
+			lifecyclePolicy.failedToShutdown(this, e);
 		} finally {
 			socket.close();
 		}
@@ -153,7 +155,7 @@ public final class RedisServer implements RedisServerMBean {
 			try {
 				process.waitFor();
 			} catch (InterruptedException e) {
-				lifecyclePolicy.failedToShutdown(this);
+				lifecyclePolicy.failedToShutdown(this, e);
 			} finally {
 				interrupter.cancel(false);
 				Thread.interrupted();

@@ -1,5 +1,10 @@
 package uk.co.datumedge.redislauncher;
 
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 
 import org.junit.Test;
@@ -18,8 +23,14 @@ public class KeepRunningOnErrorLifecyclePolicyTest {
 		lifecyclePolicy.serverNotReady(IGNORED_REDIS_SERVER);
 	}
 
-	@Test(expected=IOException.class)
+	@Test
 	public void throwsIOExceptionWhenRedisServerFailedToShutdown() throws IOException {
-		lifecyclePolicy.failedToShutdown(IGNORED_REDIS_SERVER);
+		Throwable cause = new RuntimeException();
+		try {
+			lifecyclePolicy.failedToShutdown(IGNORED_REDIS_SERVER, cause);
+			fail("Expected IOException");
+		} catch (IOException e) {
+			assertThat(e.getCause(), is(equalTo(cause)));
+		}
 	}
 }

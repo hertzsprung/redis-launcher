@@ -2,6 +2,7 @@ package uk.co.datumedge.redislauncher;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -313,8 +314,9 @@ public class RedisServerTest {
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
 			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
-			oneOf(mockLifecyclePolicy).failedToShutdown(server);
+			oneOf(mockLifecyclePolicy).failedToShutdown(with(server), with(notNullValue(InterruptedException.class)));
 		}});
+
 		try {
 			server.start();
 		} finally {
@@ -323,6 +325,28 @@ public class RedisServerTest {
 			} finally {
 				server.destroy();
 			}
+		}
+	}
+
+	@Test(timeout=TIMEOUT)
+	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
+		final RedisServer server = new RedisServer(processBuilder, mockLifecyclePolicy);
+
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
+			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
+			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
+			oneOf(mockLifecyclePolicy).failedToShutdown(with(server), with(notNullValue(IOException.class)));
+		}});
+
+		Jedis jedis = null;
+		try {
+			jedis = new Jedis("localhost");
+			server.start();
+			jedis.shutdown();
+			server.stop();
+		} finally {
+			if (jedis != null) jedis.disconnect();
 		}
 	}
 
