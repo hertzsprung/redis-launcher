@@ -3,7 +3,6 @@ package uk.co.datumedge.redislauncher;
 import java.io.IOException;
 
 public interface LifecyclePolicy {
-
 	int getMaximumConnectionAttempts();
 
 	/**
@@ -15,7 +14,6 @@ public interface LifecyclePolicy {
 	 * The maximum time to wait for the server process to exit after requesting shutdown.
 	 */
 	long getShutdownTimeoutMillis();
-	void failedToConnect(RedisServer redisServer);
-	void serverNotReady(RedisServer redisServer);
-	void failedToShutdown(RedisServer redisServer) throws IOException;
+	void failedToStart(RedisServer redisServer);
+	void failedToStop(RedisServer redisServer) throws IOException;
 }

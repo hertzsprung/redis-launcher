@@ -12,7 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public final class RedisServer implements RedisServerMBean {
+public final class LocalRedisServer implements RedisServer, LocalRedisServerMBean {
 	private static final int DEFAULT_PORT = 6379;
 
 	/**
@@ -38,24 +38,23 @@ public final class RedisServer implements RedisServerMBean {
 	 * @throws NullPointerException
 	 *             if the {@code redislauncher.command} system property does not exist
 	 */
-	public static RedisServer newInstance() {
-		String command = System.getProperty(RedisServer.COMMAND_PROPERTY);
+	public static LocalRedisServer newInstance() {
+		String command = System.getProperty(LocalRedisServer.COMMAND_PROPERTY);
 		if (command == null) {
-			throw new NullPointerException(RedisServer.COMMAND_PROPERTY +
+			throw new NullPointerException(LocalRedisServer.COMMAND_PROPERTY +
 					" system property must be a path to a redis-server executable");
 		}
-		return new RedisServer(new ProcessBuilder(command));
+		return new LocalRedisServer(new ProcessBuilder(command));
 	}
 
-	public RedisServer(ProcessBuilder processBuilder) {
+	public LocalRedisServer(ProcessBuilder processBuilder) {
 		this(processBuilder, DEFAULT_LIFECYCLE_POLICY);
 	}
 
-	public RedisServer(ProcessBuilder processBuilder, LifecyclePolicy lifecyclePolicy) {
+	public LocalRedisServer(ProcessBuilder processBuilder, LifecyclePolicy lifecyclePolicy) {
 		this.processBuilder = processBuilder;
 		this.lifecyclePolicy = lifecyclePolicy;
 	}
-
 
 	/**
 	 * Start a redis server and block until it is ready to accept requests.
@@ -72,7 +71,9 @@ public final class RedisServer implements RedisServerMBean {
 	 */
 	@Override
 	public void start() throws IOException, InterruptedException {
-		if (started) return;
+		if (started) {
+			return;
+		}
 		process = processBuilder.start();
 		new InputStreamGobbler(process.getInputStream()).start();
 		new InputStreamGobbler(process.getErrorStream()).start();
@@ -99,7 +100,7 @@ public final class RedisServer implements RedisServerMBean {
 			}
 		}
 
-		lifecyclePolicy.failedToConnect(this);
+		lifecyclePolicy.failedToStart(this);
 		throw new ConnectException("Couldn't connect after " +
 				lifecyclePolicy.getMaximumConnectionAttempts() + " attempts");
 	}
@@ -111,11 +112,13 @@ public final class RedisServer implements RedisServerMBean {
 		for (int i = 0; i < lifecyclePolicy.getMaximumReadinessAttempts(); i++) {
 			output.write(PING_COMMAND);
 			output.flush();
-			if (new Reply(input).parse().equals("+PONG")) return;
+			if (new Reply(input).parse().equals("+PONG")) {
+				return;
+			}
 			TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS);
 		}
 
-		lifecyclePolicy.serverNotReady(this);
+		lifecyclePolicy.failedToStart(this);
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
 				lifecyclePolicy.getMaximumReadinessAttempts() + " attempts");
 	}
@@ -127,7 +130,9 @@ public final class RedisServer implements RedisServerMBean {
 	 */
 	@Override
 	public void stop() throws IOException {
-		if (!started) return;
+		if (!started) {
+			return;
+		}
 		Socket socket = new Socket();
 		try {
 			socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
@@ -153,7 +158,7 @@ public final class RedisServer implements RedisServerMBean {
 			try {
 				process.waitFor();
 			} catch (InterruptedException e) {
-				lifecyclePolicy.failedToShutdown(this);
+				lifecyclePolicy.failedToStop(this);
 			} finally {
 				interrupter.cancel(false);
 				Thread.interrupted();
@@ -175,7 +180,10 @@ public final class RedisServer implements RedisServerMBean {
 	/**
 	 * Forcibly terminate the redis server.
 	 */
+	@Override
 	public void destroy() {
-		if (process != null) process.destroy();
+		if (process != null) {
+			process.destroy();
+		}
 	}
 }

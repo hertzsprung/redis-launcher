@@ -9,17 +9,12 @@ public class KeepRunningOnErrorLifecyclePolicyTest {
 	private final KeepRunningOnErrorLifecyclePolicy lifecyclePolicy = new KeepRunningOnErrorLifecyclePolicy();
 
 	@Test
-	public void doesNothingWhenRedisServerFailedToConnect() {
-		lifecyclePolicy.failedToConnect(IGNORED_REDIS_SERVER);
-	}
-
-	@Test
-	public void doesNothingWhenRedisServerNotReady() {
-		lifecyclePolicy.serverNotReady(IGNORED_REDIS_SERVER);
+	public void doesNothingWhenRedisServerFailedToStart() {
+		lifecyclePolicy.failedToStart(IGNORED_REDIS_SERVER);
 	}
 
 	@Test(expected=IOException.class)
-	public void throwsIOExceptionWhenRedisServerFailedToShutdown() throws IOException {
-		lifecyclePolicy.failedToShutdown(IGNORED_REDIS_SERVER);
+	public void throwsIOExceptionWhenRedisServerFailedToStop() throws IOException {
+		lifecyclePolicy.failedToStop(IGNORED_REDIS_SERVER);
 	}
 }

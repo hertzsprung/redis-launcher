@@ -23,15 +23,11 @@ public final class KeepRunningOnErrorLifecyclePolicy implements LifecyclePolicy 
 	}
 
 	@Override
-	public void failedToConnect(RedisServer redisServer) {
+	public void failedToStart(RedisServer redisServer) {
 	}
 
 	@Override
-	public void serverNotReady(RedisServer redisServer) {
-	}
-
-	@Override
-	public void failedToShutdown(RedisServer redisServer) throws IOException {
+	public void failedToStop(RedisServer redisServer) throws IOException {
 		throw new IOException(redisServer + " failed to shutdown");
 	}
 
