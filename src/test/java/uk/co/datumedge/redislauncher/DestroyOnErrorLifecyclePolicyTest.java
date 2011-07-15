@@ -24,7 +24,7 @@ public class DestroyOnErrorLifecyclePolicyTest {
 	@Test
 	public void destroysServerOnFailureToStop() throws IOException {
 		expectServerDestroy();
-		lifecyclePolicy.failedToStop(server);
+		lifecyclePolicy.failedToStop(server, new RuntimeException());
 	}
 
 	private void expectServerDestroy() {

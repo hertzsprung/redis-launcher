@@ -139,6 +139,8 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 			OutputStream os = socket.getOutputStream();
 			os.write("*1\r\n$8\r\nSHUTDOWN\r\n".getBytes("UTF-8"));
 			os.flush();
+		} catch (IOException e) {
+			lifecyclePolicy.failedToStop(this, e);
 		} finally {
 			socket.close();
 		}
@@ -158,7 +160,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 			try {
 				process.waitFor();
 			} catch (InterruptedException e) {
-				lifecyclePolicy.failedToStop(this);
+				lifecyclePolicy.failedToStop(this, e);
 			} finally {
 				interrupter.cancel(false);
 				Thread.interrupted();

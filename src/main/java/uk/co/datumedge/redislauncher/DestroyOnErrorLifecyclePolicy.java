@@ -27,7 +27,7 @@ public class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
 	}
 
 	@Override
-	public void failedToStop(RedisServer redisServer) throws IOException {
+	public void failedToStop(RedisServer redisServer, Throwable cause) throws IOException {
 		redisServer.destroy();
 	}
 }

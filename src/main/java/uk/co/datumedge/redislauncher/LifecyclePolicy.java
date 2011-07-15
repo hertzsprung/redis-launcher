@@ -15,5 +15,5 @@ public interface LifecyclePolicy {
 	 */
 	long getShutdownTimeoutMillis();
 	void failedToStart(RedisServer redisServer);
-	void failedToStop(RedisServer redisServer) throws IOException;
+	void failedToStop(RedisServer redisServer, Throwable cause) throws IOException;
 }

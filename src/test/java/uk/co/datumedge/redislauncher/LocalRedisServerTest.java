@@ -1,5 +1,6 @@
 package uk.co.datumedge.redislauncher;
 
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
@@ -321,8 +322,9 @@ public class LocalRedisServerTest {
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
 			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
-			oneOf(mockLifecyclePolicy).failedToStop(server);
+			oneOf(mockLifecyclePolicy).failedToStop(with(server), with(notNullValue(IOException.class)));
 		}});
+
 		try {
 			server.start();
 		} finally {
@@ -331,6 +333,28 @@ public class LocalRedisServerTest {
 			} finally {
 				server.destroy();
 			}
+		}
+	}
+
+	@Test(timeout=TIMEOUT)
+	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
+		final RedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
+
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
+			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
+			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
+			oneOf(mockLifecyclePolicy).failedToStop(with(server), with(notNullValue(InterruptedException.class)));
+		}});
+
+		Jedis jedis = null;
+		try {
+			jedis = new Jedis("localhost");
+			server.start();
+			jedis.shutdown();
+			server.stop();
+		} finally {
+			if (jedis != null) jedis.disconnect();
 		}
 	}
 
@@ -347,9 +371,7 @@ public class LocalRedisServerTest {
 				}
 			}
 		} finally {
-			if (jedis != null) {
-				jedis.disconnect();
-			}
+			if (jedis != null) jedis.disconnect();
 			server.stop();
 		}
 	}
