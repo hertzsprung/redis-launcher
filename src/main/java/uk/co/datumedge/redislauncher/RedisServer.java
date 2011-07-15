@@ -4,6 +4,6 @@ import java.io.IOException;
 
 public interface RedisServer {
 	void start() throws IOException, InterruptedException;
-	void stop() throws IOException;
+	void stop() throws IOException, InterruptedException;
 	void destroy();
 }

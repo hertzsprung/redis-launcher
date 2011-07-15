@@ -2,7 +2,6 @@ package uk.co.datumedge.redislauncher;
 
 import java.io.IOException;
 
-
 /**
  * A lifecycle policy that keeps the server running when an exception occurs.  The server will not be destroyed.
  */
@@ -27,8 +26,8 @@ public final class KeepRunningOnErrorLifecyclePolicy implements LifecyclePolicy 
 	}
 
 	@Override
-	public void failedToStop(RedisServer redisServer, Throwable cause) throws IOException {
-		throw new IOException(redisServer + " failed to shutdown", cause);
+	public void failedToStop(RedisServer redisServer) throws IOException {
+		throw new IOException("Failed to stop redis server");
 	}
 
 	@Override

@@ -1,7 +1,5 @@
 package uk.co.datumedge.redislauncher;
 
-import java.io.IOException;
-
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -22,9 +20,9 @@ public class DestroyOnErrorLifecyclePolicyTest {
 	}
 
 	@Test
-	public void destroysServerOnFailureToStop() throws IOException {
+	public void destroysServerOnFailureToStop() {
 		expectServerDestroy();
-		lifecyclePolicy.failedToStop(server, new RuntimeException());
+		lifecyclePolicy.failedToStop(server);
 	}
 
 	private void expectServerDestroy() {

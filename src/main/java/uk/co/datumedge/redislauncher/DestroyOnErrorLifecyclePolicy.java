@@ -1,6 +1,5 @@
 package uk.co.datumedge.redislauncher;
 
-import java.io.IOException;
 
 public class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
 	@Override
@@ -27,7 +26,7 @@ public class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
 	}
 
 	@Override
-	public void failedToStop(RedisServer redisServer, Throwable cause) throws IOException {
+	public void failedToStop(RedisServer redisServer) {
 		redisServer.destroy();
 	}
 }

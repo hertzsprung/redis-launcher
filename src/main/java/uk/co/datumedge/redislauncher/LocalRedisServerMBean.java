@@ -8,5 +8,5 @@ import java.io.IOException;
  */
 public interface LocalRedisServerMBean {
 	void start() throws IOException, InterruptedException;
-	void stop() throws IOException;
+	void stop() throws IOException, InterruptedException;
 }
