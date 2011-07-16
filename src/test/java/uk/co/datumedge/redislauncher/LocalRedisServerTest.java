@@ -2,7 +2,6 @@ package uk.co.datumedge.redislauncher;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -24,6 +23,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
+import org.apache.commons.exec.CommandLine;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -45,16 +45,18 @@ public class LocalRedisServerTest {
 	private final Mockery context = new JUnit4Mockery();
 	private final LifecyclePolicy mockLifecyclePolicy = context.mock(LifecyclePolicy.class);
 	private final LocalRedisServer server;
-	private final ProcessBuilder processBuilder;
+	private final Execution processBuilder;
 	private final MBeanServer mBeanServer = MBeanServerFactory.newMBeanServer();
 	private final ObjectName objectName;
 
 	public LocalRedisServerTest() throws MalformedObjectNameException {
 		String command = System.getProperty(LocalRedisServer.COMMAND_PROPERTY);
-		if (command == null) Assert.fail(LocalRedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
-		processBuilder = new ProcessBuilder(command);
+		if (command == null) {
+			Assert.fail(LocalRedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
+		}
+		processBuilder = new Execution(new CommandLine(command));
 		server = new LocalRedisServer(processBuilder);
-		objectName = new ObjectName("uk.co.datumedge.redislauncher:type=RedisServer,name=Test");
+		objectName = new ObjectName("uk.co.datumedge.redislauncher:type=LocalRedisServer,name=Test");
 	}
 
 	@Before
@@ -72,7 +74,9 @@ public class LocalRedisServerTest {
 		} catch (JedisConnectionException e) {
 			// expected
 		} finally {
-			if (jedis != null) jedis.disconnect();
+			if (jedis != null) {
+				jedis.disconnect();
+			}
 		}
 	}
 
@@ -142,7 +146,7 @@ public class LocalRedisServerTest {
 
 	@Test(expected=IOException.class)
 	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
-		RedisServer server = new LocalRedisServer(new ProcessBuilder("nonexistent-executable"));
+		RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")));
 		try {
 			server.start();
 		} finally {
@@ -152,7 +156,7 @@ public class LocalRedisServerTest {
 
 	@Test(expected=ConnectException.class)
 	public void throwsConnectExceptionIfFailedToConnect() throws InterruptedException, IOException {
-		RedisServer server = new LocalRedisServer(new ProcessBuilder("java"));
+		RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")));
 
 		try {
 			server.start();
@@ -167,11 +171,11 @@ public class LocalRedisServerTest {
 
 	@Test
 	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(new ProcessBuilder("java"), mockLifecyclePolicy);
+		final RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")), mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
 			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(1));
-			oneOf(mockLifecyclePolicy).failedToConnect(with(sameInstance(server)));
+			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
 		try {
@@ -204,7 +208,9 @@ public class LocalRedisServerTest {
 			jedis = new Jedis("localhost");
 			assertThat(jedis.get("RedisServerTestKey0_0"), is(equalTo("value")));
 		} finally {
-			if (jedis != null) jedis.disconnect();
+			if (jedis != null) {
+				jedis.disconnect();
+			}
 		}
 	}
 
@@ -212,7 +218,7 @@ public class LocalRedisServerTest {
 	public void throwsServerNotReadyExceptionWhenNotReadyToAcceptRequestsAfterTimeout() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		RedisServer server = redisServerWithOnlyOneReadinessAttempt();
+		LocalRedisServer server = redisServerWithOnlyOneReadinessAttempt();
 		try {
 			server.start();
 		} finally {
@@ -232,7 +238,7 @@ public class LocalRedisServerTest {
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(1));
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
 
-			oneOf(mockLifecyclePolicy).serverNotReady(with(sameInstance(server)));
+			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
 		try {
@@ -250,7 +256,9 @@ public class LocalRedisServerTest {
 		try {
 			while (true) {
 				try {
-					if ("PONG".equals(jedis.ping())) return;
+					if ("PONG".equals(jedis.ping())) {
+						return;
+					}
 					TimeUnit.MILLISECONDS.sleep(1000);
 				} catch (JedisDataException e) {
 					// ignore
@@ -314,7 +322,7 @@ public class LocalRedisServerTest {
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
 			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
-			oneOf(mockLifecyclePolicy).failedToShutdown(with(server), with(notNullValue(InterruptedException.class)));
+			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
 		try {
@@ -336,7 +344,7 @@ public class LocalRedisServerTest {
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
 			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
-			oneOf(mockLifecyclePolicy).failedToShutdown(with(server), with(notNullValue(IOException.class)));
+			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
 		Jedis jedis = null;
@@ -346,7 +354,9 @@ public class LocalRedisServerTest {
 			jedis.shutdown();
 			server.stop();
 		} finally {
-			if (jedis != null) jedis.disconnect();
+			if (jedis != null) {
+				jedis.disconnect();
+			}
 		}
 	}
 
@@ -363,7 +373,9 @@ public class LocalRedisServerTest {
 				}
 			}
 		} finally {
-			if (jedis != null) jedis.disconnect();
+			if (jedis != null) {
+				jedis.disconnect();
+			}
 			server.stop();
 		}
 	}
