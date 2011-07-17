@@ -9,22 +9,17 @@ import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.Executor;
 import org.apache.commons.exec.PumpStreamHandler;
 
-class Execution {
-	private final Executor executor;
+public class Execution {
 	private final CommandLine commandLine;
 	private ExecutionProcessDestroyer processDestroyer;
 
 	public Execution(CommandLine commandLine) {
-		this(new DefaultExecutor(), commandLine);
-	}
-
-	public Execution(Executor executor, CommandLine commandLine) {
-		this.executor = executor;
 		this.commandLine = commandLine;
 	}
 
-	public DefaultExecuteResultHandler start() throws ExecuteException, IOException {
+	DefaultExecuteResultHandler start() throws ExecuteException, IOException {
 		DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
+		Executor executor = new DefaultExecutor();
 		executor.execute(commandLine, handler);
 		processDestroyer = new ExecutionProcessDestroyer();
 		executor.setProcessDestroyer(processDestroyer);
@@ -32,7 +27,7 @@ class Execution {
 		return handler;
 	}
 
-	public void destroy() {
+	void destroy() {
 		if (processDestroyer != null) {
 			processDestroyer.destroy();
 		}

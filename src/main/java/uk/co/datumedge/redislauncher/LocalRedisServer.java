@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecuteResultHandler;
-import org.apache.commons.exec.DefaultExecutor;
 
 public final class LocalRedisServer implements RedisServer, LocalRedisServerMBean {
 	private static final int DEFAULT_PORT = 6379;
@@ -45,7 +44,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 			throw new NullPointerException(LocalRedisServer.COMMAND_PROPERTY +
 					" system property must be a path to a redis-server executable");
 		}
-		return new LocalRedisServer(new Execution(new DefaultExecutor(), new CommandLine(command)));
+		return new LocalRedisServer(new Execution(new CommandLine(command)));
 	}
 
 	public LocalRedisServer(Execution execution) {
