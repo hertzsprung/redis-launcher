@@ -116,7 +116,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 		OutputStream output = socket.getOutputStream();
 		InputStream input = socket.getInputStream();
 
-		for (int i = 0; i < lifecyclePolicy.getMaximumReadinessAttempts(); i++) {
+		for (int i = 0; i < connectionProperties.getMaximumReadinessAttempts(); i++) {
 			output.write(PING_COMMAND);
 			output.flush();
 			if (new Reply(input).parse().equals("+PONG")) {
@@ -127,7 +127,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 		lifecyclePolicy.failedToStart(this);
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
-				lifecyclePolicy.getMaximumReadinessAttempts() + " attempts");
+				connectionProperties.getMaximumReadinessAttempts() + " attempts");
 	}
 
 	/**
@@ -159,7 +159,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 	private void waitForProcessShutdown() throws IOException, InterruptedException {
 		try {
-			executionResultHandler.waitFor(lifecyclePolicy.getShutdownTimeoutMillis());
+			executionResultHandler.waitFor(connectionProperties.getShutdownTimeoutMillis());
 			if (!executionResultHandler.hasResult()) {
 				lifecyclePolicy.failedToStop(this);
 			}
