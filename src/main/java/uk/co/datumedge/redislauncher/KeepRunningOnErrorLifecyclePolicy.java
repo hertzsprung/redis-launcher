@@ -31,11 +31,6 @@ public final class KeepRunningOnErrorLifecyclePolicy implements LifecyclePolicy 
 	}
 
 	@Override
-	public int getMaximumConnectionAttempts() {
-		return DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS;
-	}
-
-	@Override
 	public int getMaximumReadinessAttempts() {
 		return maximumReadinessAttempts;
 	}

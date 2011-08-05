@@ -5,7 +5,6 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS;
 import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_READINESS_ATTEMPTS;
 import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
 
@@ -171,10 +170,16 @@ public class LocalRedisServerTest {
 
 	@Test
 	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")), mockLifecyclePolicy);
+		ConnectionProperties connectionProperties = new ConnectionProperties.Builder()
+			.withMaximumConnectionAttempts(1)
+			.build();
+
+		final RedisServer server = new LocalRedisServer(
+				new Execution(new CommandLine("java")),
+				connectionProperties,
+				mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(1));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -234,7 +239,6 @@ public class LocalRedisServerTest {
 		final RedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(1));
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
 
@@ -320,7 +324,6 @@ public class LocalRedisServerTest {
 
 		context.checking(new Expectations() {{
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
@@ -342,7 +345,6 @@ public class LocalRedisServerTest {
 
 		context.checking(new Expectations() {{
 			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
 			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
@@ -365,7 +367,7 @@ public class LocalRedisServerTest {
 		try {
 			server.start();
 			jedis = new Jedis("localhost");
-			for (int i=0; i<100; i++) {
+			for (int i=0; i<1000; i++) {
 				Pipeline pipeline = jedis.pipelined();
 				for (int j=0; j<1000; j++) {
 					pipeline.set("RedisServerTestKey" + i + "_" + j, "value");
