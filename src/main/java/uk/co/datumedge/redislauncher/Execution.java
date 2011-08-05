@@ -7,12 +7,13 @@ import org.apache.commons.exec.DefaultExecuteResultHandler;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.Executor;
+import org.apache.commons.exec.ProcessDestroyer;
 import org.apache.commons.exec.PumpStreamHandler;
 
-class Execution {
+public class Execution {
 	private final Executor executor;
 	private final CommandLine commandLine;
-	private ExecutionProcessDestroyer processDestroyer;
+	private ExecutionProcessDestroyer executionProcessDestroyer;
 
 	public Execution(CommandLine commandLine) {
 		this(new DefaultExecutor(), commandLine);
@@ -23,18 +24,18 @@ class Execution {
 		this.commandLine = commandLine;
 	}
 
-	public DefaultExecuteResultHandler start() throws ExecuteException, IOException {
+	DefaultExecuteResultHandler start(ProcessDestroyer lifecyleProcessDestroyer) throws ExecuteException, IOException {
 		DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
-		executor.execute(commandLine, handler);
-		processDestroyer = new ExecutionProcessDestroyer();
-		executor.setProcessDestroyer(processDestroyer);
+		this.executionProcessDestroyer = new ExecutionProcessDestroyer();
+		executor.setProcessDestroyer(new CompositeProcessDestroyer(this.executionProcessDestroyer, lifecyleProcessDestroyer));
 		executor.setStreamHandler(new PumpStreamHandler(null, null));
+		executor.execute(commandLine, handler);
 		return handler;
 	}
 
-	public void destroy() {
-		if (processDestroyer != null) {
-			processDestroyer.destroy();
+	void destroy() {
+		if (executionProcessDestroyer != null) {
+			executionProcessDestroyer.destroy();
 		}
 	}
 }

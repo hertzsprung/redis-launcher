@@ -21,6 +21,9 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
 import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.ExecuteException;
+import org.apache.commons.exec.ExecuteWatchdog;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -178,6 +181,7 @@ public class LocalRedisServerTest {
 				mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -328,6 +332,7 @@ public class LocalRedisServerTest {
 				mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -344,9 +349,10 @@ public class LocalRedisServerTest {
 
 	@Test(timeout=TIMEOUT)
 	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
+		final RedisServer server = new LocalRedisServer(processBuilder, ConnectionProperties.DEFAULT, mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -421,5 +427,38 @@ public class LocalRedisServerTest {
 
 	private void invokeMBeanOperation(String operation) throws ReflectionException, InstanceNotFoundException, MBeanException {
 		mBeanServer.invoke(objectName, operation, new Object[0], new String[0]);
+	}
+
+	@Test(expected=JedisConnectionException.class)
+	public void stopsServerWhenJavaProcessIsKilled() throws IOException, InterruptedException {
+		try {
+			CommandLine commandLine = new CommandLine("java")
+					.addArguments(new String[]{"-cp", System.getProperty("java.class.path")})
+					.addArgument(String.format("-D%s=%s", LocalRedisServer.COMMAND_PROPERTY, System.getProperty(LocalRedisServer.COMMAND_PROPERTY)))
+					.addArgument(ForkedRedisServer.class.getCanonicalName());
+
+			DefaultExecutor executor = new DefaultExecutor();
+			ExecuteWatchdog watchdog = new ExecuteWatchdog(1000L);
+			executor.setWatchdog(watchdog);
+			try {
+				executor.execute(commandLine);
+				fail("Expected watchdog to terminate process");
+			} catch (ExecuteException e) {
+				assertThat(watchdog.killedProcess(), is(true));
+			}
+
+			pingServer();
+		} finally {
+			try {
+				Jedis jedis = new Jedis("localhost");
+				try {
+					jedis.shutdown();
+				} finally {
+					jedis.disconnect();
+				}
+			} catch (JedisConnectionException e) {
+				// will happen if forked process correctly killed the redis-server process
+			}
+		}
 	}
 }
