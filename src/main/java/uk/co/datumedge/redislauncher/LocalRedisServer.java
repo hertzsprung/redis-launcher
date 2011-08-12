@@ -30,6 +30,8 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	private DefaultExecuteResultHandler executionResultHandler;
 	private boolean started;
 
+	private final ConnectionProperties connectionProperties;
+
 	/**
 	 * Creates a new server instance using the {@code redislauncher.command} system property. The property value must be
 	 * a path to a {@code redis-server} executable.
@@ -48,11 +50,13 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	}
 
 	public LocalRedisServer(Execution execution) {
-		this(execution, DEFAULT_LIFECYCLE_POLICY);
+		this(execution, ConnectionProperties.DEFAULT, DEFAULT_LIFECYCLE_POLICY);
 	}
 
-	public LocalRedisServer(Execution execution, LifecyclePolicy lifecyclePolicy) {
+	public LocalRedisServer(Execution execution, ConnectionProperties connectionProperties,
+			LifecyclePolicy lifecyclePolicy) {
 		this.execution = execution;
+		this.connectionProperties = connectionProperties;
 		this.lifecyclePolicy = lifecyclePolicy;
 	}
 
@@ -71,8 +75,10 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 */
 	@Override
 	public void start() throws IOException, InterruptedException {
-		if (started) return;
-		executionResultHandler = execution.start();
+		if (started) {
+			return;
+		}
+		executionResultHandler = execution.start(lifecyclePolicy.getProcessDestroyer());
 		Socket socket = tryToConnect();
 		started = true;
 		try {
@@ -83,7 +89,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	}
 
 	private Socket tryToConnect() throws IOException, InterruptedException {
-		for (int i = 0; i < lifecyclePolicy.getMaximumConnectionAttempts(); i++) {
+		for (int i = 0; i < connectionProperties.getMaximumConnectionAttempts(); i++) {
 			Socket socket = new Socket();
 			try {
 				socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
@@ -98,23 +104,25 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 		lifecyclePolicy.failedToStart(this);
 		throw new ConnectException("Couldn't connect after " +
-				lifecyclePolicy.getMaximumConnectionAttempts() + " attempts");
+				connectionProperties.getMaximumConnectionAttempts() + " attempts");
 	}
 
 	private void waitForServerReadiness(Socket socket) throws IOException, InterruptedException {
 		OutputStream output = socket.getOutputStream();
 		InputStream input = socket.getInputStream();
 
-		for (int i = 0; i < lifecyclePolicy.getMaximumReadinessAttempts(); i++) {
+		for (int i = 0; i < connectionProperties.getMaximumReadinessAttempts(); i++) {
 			output.write(PING_COMMAND);
 			output.flush();
-			if (new Reply(input).parse().equals("+PONG")) return;
+			if (new Reply(input).parse().equals("+PONG")) {
+				return;
+			}
 			TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS);
 		}
 
 		lifecyclePolicy.failedToStart(this);
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
-				lifecyclePolicy.getMaximumReadinessAttempts() + " attempts");
+				connectionProperties.getMaximumReadinessAttempts() + " attempts");
 	}
 
 	/**
@@ -146,7 +154,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 	private void waitForProcessShutdown() throws IOException, InterruptedException {
 		try {
-			executionResultHandler.waitFor(lifecyclePolicy.getShutdownTimeoutMillis());
+			executionResultHandler.waitFor(connectionProperties.getShutdownTimeoutMillis());
 			if (!executionResultHandler.hasResult()) {
 				lifecyclePolicy.failedToStop(this);
 			}

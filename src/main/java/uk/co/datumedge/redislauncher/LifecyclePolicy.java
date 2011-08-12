@@ -2,19 +2,10 @@ package uk.co.datumedge.redislauncher;
 
 import java.io.IOException;
 
+import org.apache.commons.exec.ProcessDestroyer;
 
 public interface LifecyclePolicy {
-	int getMaximumConnectionAttempts();
-
-	/**
-	 * The maximum number of attempts at checking that the server is ready to accept requests.
-	 */
-	int getMaximumReadinessAttempts();
-
-	/**
-	 * The maximum time to wait for the server process to exit after requesting shutdown.
-	 */
-	long getShutdownTimeoutMillis();
 	void failedToStart(RedisServer redisServer);
 	void failedToStop(RedisServer redisServer) throws IOException;
+	ProcessDestroyer getProcessDestroyer();
 }

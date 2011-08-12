@@ -5,9 +5,6 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS;
-import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_MAXIMUM_READINESS_ATTEMPTS;
-import static uk.co.datumedge.redislauncher.KeepRunningOnErrorLifecyclePolicy.DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +21,9 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
 import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.ExecuteException;
+import org.apache.commons.exec.ExecuteWatchdog;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -171,10 +171,17 @@ public class LocalRedisServerTest {
 
 	@Test
 	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")), mockLifecyclePolicy);
+		ConnectionProperties connectionProperties = new ConnectionProperties.Builder()
+			.withMaximumConnectionAttempts(1)
+			.build();
 
+		final RedisServer server = new LocalRedisServer(
+				new Execution(new CommandLine("java")),
+				connectionProperties,
+				mockLifecyclePolicy);
+
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(1));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -231,13 +238,14 @@ public class LocalRedisServerTest {
 	public void callsLifecyclePolicyWhenNotReadyToAcceptRequestsAfterTimeout() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		final RedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
+		ConnectionProperties connectionProperties = new ConnectionProperties.Builder()
+				.withMaximumReadinessAttempts(1)
+				.build();
 
+		final RedisServer server = new LocalRedisServer(processBuilder, connectionProperties, mockLifecyclePolicy);
+
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
-			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(1));
-			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
-
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -264,6 +272,8 @@ public class LocalRedisServerTest {
 					// ignore
 				}
 			}
+		} catch (JedisConnectionException e) {
+			// ignore
 		} finally {
 			jedis.disconnect();
 		}
@@ -291,9 +301,10 @@ public class LocalRedisServerTest {
 	private LocalRedisServer redisServerWithOnlyOneReadinessAttempt() {
 		return new LocalRedisServer(
 				processBuilder,
-				new KeepRunningOnErrorLifecyclePolicy.Builder()
+				new ConnectionProperties.Builder()
 						.withMaximumReadinessAttempts(1)
-						.build());
+						.build(),
+				new KeepRunningOnErrorLifecyclePolicy());
 	}
 
 	private void pingForFiveSeconds() throws InterruptedException {
@@ -316,12 +327,15 @@ public class LocalRedisServerTest {
 	public void callsLifecyclePolicyIfWaitingForProcessExitTimesOut() throws IOException, InterruptedException {
 		populateServerWithLargeDataSet();
 
-		final LocalRedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
+		final LocalRedisServer server = new LocalRedisServer(
+				processBuilder,
+				new ConnectionProperties.Builder()
+					.withShutdownTimeoutMillis(1L)
+					.build(),
+				mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(1L));
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
-			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -338,12 +352,10 @@ public class LocalRedisServerTest {
 
 	@Test(timeout=TIMEOUT)
 	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(processBuilder, mockLifecyclePolicy);
+		final RedisServer server = new LocalRedisServer(processBuilder, ConnectionProperties.DEFAULT, mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getShutdownTimeoutMillis(); will(returnValue(DEFAULT_SHUTDOWN_TIMEOUT_MILLIS));
-			allowing(mockLifecyclePolicy).getMaximumConnectionAttempts(); will(returnValue(DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS));
-			allowing(mockLifecyclePolicy).getMaximumReadinessAttempts(); will(returnValue(DEFAULT_MAXIMUM_READINESS_ATTEMPTS));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -360,12 +372,18 @@ public class LocalRedisServerTest {
 		}
 	}
 
+	private void allowingMockLifecyclePolicyReturnsNullProcessDestroyer() {
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
+		}});
+	}
+
 	private void populateServerWithLargeDataSet() throws IOException, InterruptedException {
 		Jedis jedis = null;
 		try {
 			server.start();
 			jedis = new Jedis("localhost");
-			for (int i=0; i<100; i++) {
+			for (int i=0; i<1000; i++) {
 				Pipeline pipeline = jedis.pipelined();
 				for (int j=0; j<1000; j++) {
 					pipeline.set("RedisServerTestKey" + i + "_" + j, "value");
@@ -418,5 +436,38 @@ public class LocalRedisServerTest {
 
 	private void invokeMBeanOperation(String operation) throws ReflectionException, InstanceNotFoundException, MBeanException {
 		mBeanServer.invoke(objectName, operation, new Object[0], new String[0]);
+	}
+
+	@Test(expected=JedisConnectionException.class)
+	public void stopsServerWhenJavaProcessIsKilled() throws IOException, InterruptedException {
+		try {
+			CommandLine commandLine = new CommandLine("java")
+					.addArguments(new String[]{"-cp", System.getProperty("java.class.path")})
+					.addArgument(String.format("-D%s=%s", LocalRedisServer.COMMAND_PROPERTY, System.getProperty(LocalRedisServer.COMMAND_PROPERTY)))
+					.addArgument(ForkedRedisServer.class.getCanonicalName());
+
+			DefaultExecutor executor = new DefaultExecutor();
+			ExecuteWatchdog watchdog = new ExecuteWatchdog(1000L);
+			executor.setWatchdog(watchdog);
+			try {
+				executor.execute(commandLine);
+				fail("Expected watchdog to terminate process");
+			} catch (ExecuteException e) {
+				assertThat(watchdog.killedProcess(), is(true));
+			}
+
+			pingServer();
+		} finally {
+			try {
+				Jedis jedis = new Jedis("localhost");
+				try {
+					jedis.shutdown();
+				} finally {
+					jedis.disconnect();
+				}
+			} catch (JedisConnectionException e) {
+				// will happen if forked process correctly killed the redis-server process
+			}
+		}
 	}
 }
