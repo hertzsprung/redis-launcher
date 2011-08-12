@@ -245,6 +245,7 @@ public class LocalRedisServerTest {
 		final RedisServer server = new LocalRedisServer(processBuilder, connectionProperties, mockLifecyclePolicy);
 
 		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -271,6 +272,8 @@ public class LocalRedisServerTest {
 					// ignore
 				}
 			}
+		} catch (JedisConnectionException e) {
+			// ignore
 		} finally {
 			jedis.disconnect();
 		}
