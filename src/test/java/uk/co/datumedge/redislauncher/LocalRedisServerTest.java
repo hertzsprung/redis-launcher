@@ -180,8 +180,8 @@ public class LocalRedisServerTest {
 				connectionProperties,
 				mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -244,8 +244,8 @@ public class LocalRedisServerTest {
 
 		final RedisServer server = new LocalRedisServer(processBuilder, connectionProperties, mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStart(with(sameInstance(server)));
 		}});
 
@@ -334,8 +334,8 @@ public class LocalRedisServerTest {
 					.build(),
 				mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -354,8 +354,8 @@ public class LocalRedisServerTest {
 	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
 		final RedisServer server = new LocalRedisServer(processBuilder, ConnectionProperties.DEFAULT, mockLifecyclePolicy);
 
+		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
 			oneOf(mockLifecyclePolicy).failedToStop(server);
 		}});
 
@@ -370,6 +370,12 @@ public class LocalRedisServerTest {
 				jedis.disconnect();
 			}
 		}
+	}
+
+	private void allowingMockLifecyclePolicyReturnsNullProcessDestroyer() {
+		context.checking(new Expectations() {{
+			allowing(mockLifecyclePolicy).getProcessDestroyer(); will(returnValue(NullProcessDestroyer.INSTANCE));
+		}});
 	}
 
 	private void populateServerWithLargeDataSet() throws IOException, InterruptedException {
