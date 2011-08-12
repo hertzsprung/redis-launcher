@@ -5,7 +5,7 @@ import java.util.HashSet;
 
 import org.apache.commons.exec.ProcessDestroyer;
 
-class ExecutionProcessDestroyer implements ProcessDestroyer {
+final class ExecutionProcessDestroyer implements ProcessDestroyer {
 	private final Collection<Process> processes = new HashSet<Process>();
 
 	@Override

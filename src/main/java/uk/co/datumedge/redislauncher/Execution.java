@@ -5,12 +5,11 @@ import java.io.IOException;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecuteResultHandler;
 import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.Executor;
 import org.apache.commons.exec.ProcessDestroyer;
 import org.apache.commons.exec.PumpStreamHandler;
 
-public class Execution {
+public final class Execution {
 	private final CommandLine commandLine;
 	private ExecutionProcessDestroyer executionProcessDestroyer;
 

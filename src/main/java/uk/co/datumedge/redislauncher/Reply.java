@@ -3,7 +3,7 @@ package uk.co.datumedge.redislauncher;
 import java.io.IOException;
 import java.io.InputStream;
 
-class Reply {
+final class Reply {
 	private final InputStream input;
 
 	public Reply(InputStream input) {

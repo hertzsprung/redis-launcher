@@ -3,7 +3,7 @@ package uk.co.datumedge.redislauncher;
 import org.apache.commons.exec.ProcessDestroyer;
 import org.apache.commons.exec.ShutdownHookProcessDestroyer;
 
-public class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
+public final class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
 	@Override
 	public void failedToStart(RedisServer redisServer) {
 		redisServer.destroy();

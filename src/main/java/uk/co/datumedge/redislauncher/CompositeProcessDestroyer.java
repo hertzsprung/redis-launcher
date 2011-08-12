@@ -2,12 +2,12 @@ package uk.co.datumedge.redislauncher;
 
 import org.apache.commons.exec.ProcessDestroyer;
 
-class CompositeProcessDestroyer implements ProcessDestroyer {
+final class CompositeProcessDestroyer implements ProcessDestroyer {
 	private final ProcessDestroyer[] processDestroyers;
 
 	public CompositeProcessDestroyer(ProcessDestroyer processDestroyer,
 			ProcessDestroyer... processDestroyers) {
-		this.processDestroyers = new ProcessDestroyer[processDestroyers.length+1];
+		this.processDestroyers = new ProcessDestroyer[processDestroyers.length + 1];
 		this.processDestroyers[0] = processDestroyer;
 		System.arraycopy(processDestroyers, 0, this.processDestroyers, 1, processDestroyers.length);
 	}
