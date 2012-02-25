@@ -185,6 +185,7 @@
 	</issueManagement>
 	<scm>
 		<connection>scm:git:git://github.com/hertzsprung/redis-launcher.git</connection>
+		<developerConnection>scm:git:git@github.com:hertzsprung/redis-launcher.git</developerConnection>
 		<url>http://github.com/hertzsprung/redis-launcher</url>
 	</scm>
 	<distributionManagement>
