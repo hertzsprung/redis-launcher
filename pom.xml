@@ -69,13 +69,14 @@
 						<artifactId>wagon-ssh</artifactId>
 						<version>2.2</version>
 					</dependency>
-				</dependencies>		
+				</dependencies>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
 				<version>2.2.2</version>
 				<configuration>
+					<releaseProfiles>release</releaseProfiles>
 					<arguments>-Dredislauncher.command=${redislauncher.command}</arguments>
 				</configuration>
 			</plugin>
@@ -138,6 +139,13 @@
 						</plugin>
 					</reportPlugins>
 				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.wagon</groupId>
+						<artifactId>wagon-ssh</artifactId>
+						<version>2.2</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -207,7 +215,7 @@
 	</distributionManagement>
 	<profiles>
 		<profile>
-			<id>release-profile</id>
+			<id>release</id>
 			<build>
 				<plugins>
 					<plugin>
