@@ -81,7 +81,12 @@ public class LocalRedisServerTest {
 	}
 
 	private void deleteDatastore() {
-		new File("dump.rdb").delete();
+		File datastore = new File("dump.rdb");
+		if (datastore.exists()) {
+			if (!datastore.delete()) {
+				fail("Could not delete dump.rdb");
+			}
+		}
 	}
 
 	@After

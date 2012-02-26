@@ -31,7 +31,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	private final LifecyclePolicy lifecyclePolicy;
 	private final ConnectionProperties connectionProperties;
 	private final Execution execution;
-	
+
 	private DefaultExecuteResultHandler executionResultHandler;
 	private boolean started;
 
@@ -56,7 +56,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 * Constructs a new {@code LocalRedisServer} instance using the {@code execution}.
 	 * {@linkplain ConnectionProperties#DEFAULT Default connection properties} are used, and the server
 	 * {@linkplain KeepRunningOnErrorLifecyclePolicy keeps running on error}.
-	 * 
+	 *
 	 * @param execution
 	 *            an {@code Execution} instance
 	 */
@@ -67,7 +67,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	/**
 	 * Constructs a new {@code LocalRedisServer} instance using the {@code execution}, {@code connectionProperties} and
 	 * {@code lifecyclePolicy}.
-	 * 
+	 *
 	 * @param execution
 	 *            an {@code Execution} instance
 	 * @param connectionProperties
@@ -84,7 +84,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 	/**
 	 * {@inheritDoc}
-	 * 
+	 *
 	 * There are three steps to server startup:
 	 * <ol>
 	 * <li>Execute the redis-server process</li>
@@ -95,7 +95,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 * {@link ConnectionProperties#maximumReadinessAttempts}</li>, waiting
 	 * 1000 milliseconds between each attempt.
 	 * </ol>
-	 * 
+	 *
 	 * @throws ConnectException
 	 *             if the server process was started but no connection to it could be made
 	 * @throws ServerNotReadyException

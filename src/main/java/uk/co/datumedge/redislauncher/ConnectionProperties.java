@@ -10,17 +10,17 @@ public final class ConnectionProperties {
 	 * </ul>
 	 */
 	public static final ConnectionProperties DEFAULT = new Builder().build();
-	
+
 	/**
 	 * The maximum number of attempts at connecting to the server.
 	 */
 	public final int maximumConnectionAttempts;
-	
+
 	/**
 	 * The maximum number of attempts at checking that the server is ready to accept requests.
 	 */
 	public final int maximumReadinessAttempts;
-	
+
 	/**
 	 * The maximum time to wait for the server process to exit after requesting shutdown.
 	 */
@@ -43,7 +43,7 @@ public final class ConnectionProperties {
 
 		/**
 		 * Sets the maximum number of connection attempts on the builder.
-		 * 
+		 *
 		 * @return the updated builder
 		 */
 		public Builder withMaximumConnectionAttempts(int maximumConnectionAttempts) {
@@ -53,7 +53,7 @@ public final class ConnectionProperties {
 
 		/**
 		 * Sets the maximum number readiness attempts on the builder.
-		 * 
+		 *
 		 * @return the updated builder
 		 */
 		public Builder withMaximumReadinessAttempts(int maximumReadinessAttempts) {
@@ -73,7 +73,7 @@ public final class ConnectionProperties {
 
 		/**
 		 * Creates a {@code ConnectionProperties} instance from the current builder.
-		 * 
+		 *
 		 * @return a {@code ConnectionProperties} instance
 		 */
 		public ConnectionProperties build() {

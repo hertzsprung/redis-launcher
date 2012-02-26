@@ -21,7 +21,7 @@ public final class Execution {
 
 	/**
 	 * Constructs a new {@code Execution} using the {@code commandLine}.
-	 * 
+	 *
 	 * @param commandLine
 	 *            a {@code CommandLine} instance.
 	 */
@@ -33,7 +33,8 @@ public final class Execution {
 		Executor executor = new DefaultExecutor();
 		DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
 		this.executionProcessDestroyer = new ExecutionProcessDestroyer();
-		executor.setProcessDestroyer(new CompositeProcessDestroyer(this.executionProcessDestroyer, lifecyleProcessDestroyer));
+		executor.setProcessDestroyer(new CompositeProcessDestroyer(
+				this.executionProcessDestroyer, lifecyleProcessDestroyer));
 		executor.setStreamHandler(new PumpStreamHandler(IGNORED_OUTPUT_STREAM, IGNORED_ERROR_STREAM));
 		executor.execute(commandLine, handler);
 		return handler;
