@@ -3,7 +3,10 @@ package uk.co.datumedge.redislauncher;
 import org.apache.commons.exec.ProcessDestroyer;
 import org.apache.commons.exec.ShutdownHookProcessDestroyer;
 
-public final class DestroyOnErrorLifecyclePolicy implements LifecyclePolicy {
+/**
+ * A lifecycle policy that destroys the server when an exception occurs, or when the JVM terminates.
+ */
+public final class AlwaysDestroyLifecyclePolicy implements LifecyclePolicy {
 	@Override
 	public void failedToStart(RedisServer redisServer) {
 		redisServer.destroy();

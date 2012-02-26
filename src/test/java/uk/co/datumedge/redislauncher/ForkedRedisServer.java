@@ -8,7 +8,7 @@ public class ForkedRedisServer {
 	public static void main(String[] args) {
 		try {
 			Execution execution = new Execution(new CommandLine(System.getProperty(LocalRedisServer.COMMAND_PROPERTY)));
-			LocalRedisServer redisServer = new LocalRedisServer(execution, ConnectionProperties.DEFAULT, new DestroyOnErrorLifecyclePolicy());
+			LocalRedisServer redisServer = new LocalRedisServer(execution, ConnectionProperties.DEFAULT, new AlwaysDestroyLifecyclePolicy());
 			redisServer.start();
 			Thread.sleep(Long.MAX_VALUE);
 		} catch (IOException e) {

@@ -4,6 +4,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.io.IOException;
+
 import org.apache.commons.exec.ShutdownHookProcessDestroyer;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
@@ -13,10 +15,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
-public class DestroyOnErrorLifecyclePolicyTest {
+public class AlwaysDestroyLifecyclePolicyTest {
 	private final Mockery context = new JUnit4Mockery();
 	private final RedisServer server = context.mock(RedisServer.class);
-	private final DestroyOnErrorLifecyclePolicy lifecyclePolicy = new DestroyOnErrorLifecyclePolicy();
+	private final LifecyclePolicy lifecyclePolicy = new AlwaysDestroyLifecyclePolicy();
 
 	@Test
 	public void destroysServerOnFailureToStart() {
@@ -25,7 +27,7 @@ public class DestroyOnErrorLifecyclePolicyTest {
 	}
 
 	@Test
-	public void destroysServerOnFailureToStop() {
+	public void destroysServerOnFailureToStop() throws IOException {
 		expectServerDestroy();
 		lifecyclePolicy.failedToStop(server);
 	}
