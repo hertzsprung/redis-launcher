@@ -13,7 +13,19 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecuteResultHandler;
 
 /**
- * A redis server which runs in a separate process on the same host as the JVM.
+ * A redis server which runs in a separate process on the same host as the JVM. The simplest way to start a redis server
+ * is to set the {@code redislauncher.command} system property as the path to the {@code redis-server} executable, then
+ * use the following code:
+ *
+ * <pre>
+ * RedisServer redisServer = LocalRedisServer.newInstance();
+ * try {
+ * 	redisServer.start();
+ * 	...
+ * } finally {
+ * 	redisServer.stop();
+ * }
+ * </pre>
  */
 public final class LocalRedisServer implements RedisServer, LocalRedisServerMBean {
 	private static final int DEFAULT_PORT = 6379;
@@ -37,7 +49,8 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 	/**
 	 * Creates a new server instance using the {@code redislauncher.command} system property. The property value must be
-	 * a path to a {@code redis-server} executable.
+	 * a path to a {@code redis-server} executable. {@linkplain ConnectionProperties#DEFAULT Default connection
+	 * properties} are used, and the server {@linkplain KeepRunningOnErrorLifecyclePolicy keeps running on error}.
 	 *
 	 * @return a redis server instance
 	 * @throws NullPointerException
