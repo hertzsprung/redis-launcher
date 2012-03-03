@@ -5,6 +5,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,6 @@ import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
 import org.jmock.integration.junit4.JUnit4Mockery;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,17 +45,13 @@ public class LocalRedisServerTest {
 	private final Mockery context = new JUnit4Mockery();
 	private final LifecyclePolicy mockLifecyclePolicy = context.mock(LifecyclePolicy.class);
 	private final LocalRedisServer server;
-	private final Execution processBuilder;
+	private final Execution execution;
 	private final MBeanServer mBeanServer = MBeanServerFactory.newMBeanServer();
 	private final ObjectName objectName;
 
 	public LocalRedisServerTest() throws MalformedObjectNameException {
-		String command = System.getProperty(LocalRedisServer.COMMAND_PROPERTY);
-		if (command == null) {
-			Assert.fail(LocalRedisServer.COMMAND_PROPERTY + " system property must be a path to a redis-server executable");
-		}
-		processBuilder = new Execution(new CommandLine(command));
-		server = new LocalRedisServer(processBuilder);
+		execution = new Execution(defaultConfiguration());
+		server = new LocalRedisServer(execution);
 		objectName = new ObjectName("uk.co.datumedge.redislauncher:type=LocalRedisServer,name=Test");
 	}
 
@@ -110,12 +106,12 @@ public class LocalRedisServerTest {
 
 	@Test(expected=NullPointerException.class)
 	public void throwsNullPointerExceptionIfSystemPropertyIsAbsentWhenInstantiatingServer() {
-		String command = System.getProperty(LocalRedisServer.COMMAND_PROPERTY);
+		String command = System.getProperty(Configuration.COMMAND_PROPERTY);
 		try {
-			System.clearProperty(LocalRedisServer.COMMAND_PROPERTY);
+			System.clearProperty(Configuration.COMMAND_PROPERTY);
 			LocalRedisServer.newInstance();
 		} finally {
-			System.setProperty(LocalRedisServer.COMMAND_PROPERTY, command);
+			System.setProperty(Configuration.COMMAND_PROPERTY, command);
 		}
 	}
 
@@ -151,7 +147,7 @@ public class LocalRedisServerTest {
 
 	@Test(expected=IOException.class)
 	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
-		RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")));
+		RedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()));
 		try {
 			server.start();
 		} finally {
@@ -161,7 +157,7 @@ public class LocalRedisServerTest {
 
 	@Test(expected=ConnectException.class)
 	public void throwsConnectExceptionIfFailedToConnect() throws InterruptedException, IOException {
-		RedisServer server = new LocalRedisServer(new Execution(new CommandLine("java")));
+		RedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()));
 
 		try {
 			server.start();
@@ -181,7 +177,7 @@ public class LocalRedisServerTest {
 			.build();
 
 		final RedisServer server = new LocalRedisServer(
-				new Execution(new CommandLine("java")),
+				new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()),
 				connectionProperties,
 				mockLifecyclePolicy);
 
@@ -247,7 +243,7 @@ public class LocalRedisServerTest {
 				.withMaximumReadinessAttempts(1)
 				.build();
 
-		final RedisServer server = new LocalRedisServer(processBuilder, connectionProperties, mockLifecyclePolicy);
+		final RedisServer server = new LocalRedisServer(execution, connectionProperties, mockLifecyclePolicy);
 
 		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
@@ -305,7 +301,7 @@ public class LocalRedisServerTest {
 
 	private LocalRedisServer redisServerWithOnlyOneReadinessAttempt() {
 		return new LocalRedisServer(
-				processBuilder,
+				execution,
 				new ConnectionProperties.Builder()
 						.withMaximumReadinessAttempts(1)
 						.build(),
@@ -333,7 +329,7 @@ public class LocalRedisServerTest {
 		populateServerWithLargeDataSet();
 
 		final LocalRedisServer server = new LocalRedisServer(
-				processBuilder,
+				execution,
 				new ConnectionProperties.Builder()
 					.withShutdownTimeoutMillis(1L)
 					.build(),
@@ -357,7 +353,7 @@ public class LocalRedisServerTest {
 
 	@Test(timeout=TIMEOUT)
 	public void callsLifecyclePolicyIfFailedToSendShutdownCommand() throws IOException, InterruptedException {
-		final RedisServer server = new LocalRedisServer(processBuilder, ConnectionProperties.DEFAULT, mockLifecyclePolicy);
+		final RedisServer server = new LocalRedisServer(execution, ConnectionProperties.DEFAULT, mockLifecyclePolicy);
 
 		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
@@ -431,12 +427,7 @@ public class LocalRedisServerTest {
 	}
 
 	private void pingServer() {
-		Jedis jedis = new Jedis("localhost");
-		try {
-			jedis.ping();
-		} finally {
-			jedis.disconnect();
-		}
+		pingAndDisconnect(new Jedis("localhost"));
 	}
 
 	private void invokeMBeanOperation(String operation) throws ReflectionException, InstanceNotFoundException, MBeanException {
@@ -448,7 +439,7 @@ public class LocalRedisServerTest {
 		try {
 			CommandLine commandLine = new CommandLine("java")
 					.addArguments(new String[]{"-cp", System.getProperty("java.class.path")})
-					.addArgument(String.format("-D%s=%s", LocalRedisServer.COMMAND_PROPERTY, System.getProperty(LocalRedisServer.COMMAND_PROPERTY)))
+					.addArgument(String.format("-D%s=%s", Configuration.COMMAND_PROPERTY, System.getProperty(Configuration.COMMAND_PROPERTY)))
 					.addArgument(ForkedRedisServer.class.getCanonicalName());
 
 			DefaultExecutor executor = new DefaultExecutor();
@@ -473,6 +464,26 @@ public class LocalRedisServerTest {
 			} catch (JedisConnectionException e) {
 				// will happen if forked process correctly killed the redis-server process
 			}
+		}
+	}
+
+	@Test
+	public void startsServerOnNonDefaultPort() throws IOException, InterruptedException {
+		int port = 6380;
+		LocalRedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withPort(port).build()));
+		try {
+			server.start();
+			pingAndDisconnect(new Jedis("localhost", 6380));
+		} finally {
+			server.stop();
+		}
+	}
+
+	private void pingAndDisconnect(Jedis jedis) {
+		try {
+			jedis.ping();
+		} finally {
+			jedis.disconnect();
 		}
 	}
 }

@@ -1,5 +1,7 @@
 package uk.co.datumedge.redislauncher;
 
+import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -9,7 +11,6 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecuteResultHandler;
 
 /**
@@ -28,13 +29,6 @@ import org.apache.commons.exec.DefaultExecuteResultHandler;
  * </pre>
  */
 public final class LocalRedisServer implements RedisServer, LocalRedisServerMBean {
-	private static final int DEFAULT_PORT = 6379;
-
-	/**
-	 * A system property key to specify the path to a {@code redis-server} executable.
-	 */
-	public static final String COMMAND_PROPERTY = "redislauncher.command";
-
 	private static final long DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS = 100;
 	private static final long DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS = 1000;
 	private static final byte[] PING_COMMAND = "*1\r\n$4\r\nPING\r\n".getBytes(Charset.forName("UTF-8"));
@@ -57,12 +51,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 *             if the {@code redislauncher.command} system property does not exist
 	 */
 	public static LocalRedisServer newInstance() {
-		String command = System.getProperty(LocalRedisServer.COMMAND_PROPERTY);
-		if (command == null) {
-			throw new NullPointerException(LocalRedisServer.COMMAND_PROPERTY +
-					" system property must be a path to a redis-server executable");
-		}
-		return new LocalRedisServer(new Execution(new CommandLine(command)));
+		return new LocalRedisServer(new Execution(defaultConfiguration()));
 	}
 
 	/**
@@ -137,8 +126,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 		for (int i = 0; i < connectionProperties.maximumConnectionAttempts; i++) {
 			Socket socket = new Socket();
 			try {
-				socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
-				return socket;
+				return connect(socket);
 			} catch (ConnectException e) {
 				socket.close();
 				TimeUnit.MILLISECONDS.sleep(DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS);
@@ -179,7 +167,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 		}
 		Socket socket = new Socket();
 		try {
-			socket.connect(new InetSocketAddress("localhost", DEFAULT_PORT));
+			connect(socket);
 			OutputStream os = socket.getOutputStream();
 			os.write("*1\r\n$8\r\nSHUTDOWN\r\n".getBytes("UTF-8"));
 			os.flush();
@@ -192,6 +180,11 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 		waitForProcessShutdown();
 		execution.destroy();
 		started = false;
+	}
+
+	private Socket connect(Socket socket) throws IOException {
+		socket.connect(new InetSocketAddress("localhost", execution.configuration.port));
+		return socket;
 	}
 
 	private void waitForProcessShutdown() throws IOException, InterruptedException {

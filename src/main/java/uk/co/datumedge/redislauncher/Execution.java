@@ -3,7 +3,6 @@ package uk.co.datumedge.redislauncher;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecuteResultHandler;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.Executor;
@@ -16,17 +15,11 @@ import org.apache.commons.exec.PumpStreamHandler;
 public final class Execution {
 	private static final OutputStream IGNORED_OUTPUT_STREAM = null;
 	private static final OutputStream IGNORED_ERROR_STREAM = null;
-	private final CommandLine commandLine;
 	private ExecutionProcessDestroyer executionProcessDestroyer;
+	final Configuration configuration;
 
-	/**
-	 * Constructs a new {@code Execution} using the {@code commandLine}.
-	 *
-	 * @param commandLine
-	 *            a {@code CommandLine} instance.
-	 */
-	public Execution(CommandLine commandLine) {
-		this.commandLine = commandLine;
+	public Execution(Configuration configuration) {
+		this.configuration = configuration;
 	}
 
 	DefaultExecuteResultHandler start(ProcessDestroyer lifecyleProcessDestroyer) throws IOException {
@@ -36,7 +29,7 @@ public final class Execution {
 		executor.setProcessDestroyer(new CompositeProcessDestroyer(
 				this.executionProcessDestroyer, lifecyleProcessDestroyer));
 		executor.setStreamHandler(new PumpStreamHandler(IGNORED_OUTPUT_STREAM, IGNORED_ERROR_STREAM));
-		executor.execute(commandLine, handler);
+		executor.execute(configuration.commandLine(), handler);
 		return handler;
 	}
 

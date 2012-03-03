@@ -1,13 +1,13 @@
 package uk.co.datumedge.redislauncher;
 
-import java.io.IOException;
+import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
 
-import org.apache.commons.exec.CommandLine;
+import java.io.IOException;
 
 public class ForkedRedisServer {
 	public static void main(String[] args) {
 		try {
-			Execution execution = new Execution(new CommandLine(System.getProperty(LocalRedisServer.COMMAND_PROPERTY)));
+			Execution execution = new Execution(defaultConfiguration());
 			LocalRedisServer redisServer = new LocalRedisServer(execution, ConnectionProperties.DEFAULT, new AlwaysDestroyLifecyclePolicy());
 			redisServer.start();
 			Thread.sleep(Long.MAX_VALUE);
