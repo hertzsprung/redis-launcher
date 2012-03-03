@@ -1,5 +1,5 @@
 Redis-launcher is an Java library for controlling a [redis server](http://redis.io/) programmatically.
-It is released under the ]MIT license](http://www.opensource.org/licenses/mit-license.php).
+It is released under the [MIT license](http://www.opensource.org/licenses/mit-license.php).
 
 Installation
 ============
