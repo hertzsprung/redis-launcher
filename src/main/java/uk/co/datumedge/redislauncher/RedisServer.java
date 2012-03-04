@@ -2,6 +2,9 @@ package uk.co.datumedge.redislauncher;
 
 import java.io.IOException;
 
+/**
+ * Interface for controlling a redis server.
+ */
 public interface RedisServer {
 	/**
 	 * Start a redis server and block until it is ready to accept requests. Calling this method does nothing if the

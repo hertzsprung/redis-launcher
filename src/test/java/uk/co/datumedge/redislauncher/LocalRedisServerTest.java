@@ -6,6 +6,8 @@ import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
+import static uk.co.datumedge.redislauncher.Configuration.programmaticConfiguration;
+import static uk.co.datumedge.redislauncher.Configuration.staticConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -147,7 +149,8 @@ public class LocalRedisServerTest {
 
 	@Test(expected=IOException.class)
 	public void throwsIOExceptionWhenStartingIfCommandDoesNotExist() throws IOException, InterruptedException {
-		RedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()));
+		RedisServer server = new LocalRedisServer(invalidCommand());
+
 		try {
 			server.start();
 		} finally {
@@ -157,7 +160,7 @@ public class LocalRedisServerTest {
 
 	@Test(expected=ConnectException.class)
 	public void throwsConnectExceptionIfFailedToConnect() throws InterruptedException, IOException {
-		RedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()));
+		RedisServer server = new LocalRedisServer(invalidCommand());
 
 		try {
 			server.start();
@@ -170,6 +173,10 @@ public class LocalRedisServerTest {
 		}
 	}
 
+	private Execution invalidCommand() {
+		return new Execution(staticConfiguration().withCommandLine(new CommandLine("java")).build());
+	}
+
 	@Test
 	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
 		ConnectionProperties connectionProperties = new ConnectionProperties.Builder()
@@ -177,7 +184,7 @@ public class LocalRedisServerTest {
 			.build();
 
 		final RedisServer server = new LocalRedisServer(
-				new Execution(new Configuration.Builder().withCommandLine(new CommandLine("java")).build()),
+				new Execution(staticConfiguration().withCommandLine(new CommandLine("java")).build()),
 				connectionProperties,
 				mockLifecyclePolicy);
 
@@ -470,10 +477,10 @@ public class LocalRedisServerTest {
 	@Test
 	public void startsServerOnNonDefaultPort() throws IOException, InterruptedException {
 		int port = 6380;
-		LocalRedisServer server = new LocalRedisServer(new Execution(new Configuration.Builder().withPort(port).build()));
+		LocalRedisServer server = new LocalRedisServer(new Execution(programmaticConfiguration().withPort(port).build()));
 		try {
 			server.start();
-			pingAndDisconnect(new Jedis("localhost", 6380));
+			pingAndDisconnect(new Jedis("localhost", port));
 		} finally {
 			server.stop();
 		}

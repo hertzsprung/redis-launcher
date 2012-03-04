@@ -137,8 +137,8 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 		lifecyclePolicy.failedToStart(this);
 		throw new ConnectException("Couldn't connect after " +
-				(connectionProperties.maximumConnectionAttempts - 1) * DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS
-				+ " milliseconds");
+				(connectionProperties.maximumConnectionAttempts - 1) * DEFAULT_SLEEP_BETWEEN_CONNECT_RETRIES_MILLIS +
+				" milliseconds");
 	}
 
 	private void waitForServerReadiness(Socket socket) throws IOException, InterruptedException {
@@ -156,8 +156,8 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 
 		lifecyclePolicy.failedToStart(this);
 		throw new ServerNotReadyException("Server was not ready to accept requests after " +
-				(connectionProperties.maximumReadinessAttempts - 1) * DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS
-				+ " milliseconds");
+				(connectionProperties.maximumReadinessAttempts - 1) * DEFAULT_SLEEP_BETWEEN_READINESS_RETRIES_MILLIS +
+				" milliseconds");
 	}
 
 	@Override

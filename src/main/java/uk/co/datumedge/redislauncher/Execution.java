@@ -18,6 +18,12 @@ public final class Execution {
 	private ExecutionProcessDestroyer executionProcessDestroyer;
 	final Configuration configuration;
 
+	/**
+	 * Constructs a new {@code Execution} instance using the {@code configuration}.
+	 *
+	 * @param configuration
+	 *            an {@code Configuration} instance
+	 */
 	public Execution(Configuration configuration) {
 		this.configuration = configuration;
 	}
@@ -28,7 +34,10 @@ public final class Execution {
 		this.executionProcessDestroyer = new ExecutionProcessDestroyer();
 		executor.setProcessDestroyer(new CompositeProcessDestroyer(
 				this.executionProcessDestroyer, lifecyleProcessDestroyer));
-		executor.setStreamHandler(new PumpStreamHandler(IGNORED_OUTPUT_STREAM, IGNORED_ERROR_STREAM));
+		executor.setStreamHandler(new PumpStreamHandler(
+				IGNORED_OUTPUT_STREAM,
+				IGNORED_ERROR_STREAM,
+				configuration.inputStream()));
 		executor.execute(configuration.commandLine(), handler);
 		return handler;
 	}

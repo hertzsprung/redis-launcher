@@ -1,5 +1,10 @@
 package uk.co.datumedge.redislauncher;
 
+/**
+ * Properties that govern how a {@code LocalRedisServer} connects to a {@code redis-server} process.
+ *
+ * @see LocalRedisServer
+ */
 public final class ConnectionProperties {
 	/**
 	 * Default connection properties.  The defaults are:
@@ -32,6 +37,9 @@ public final class ConnectionProperties {
 		this.shutdownTimeoutMillis = shutdownTimeoutMillis;
 	}
 
+	/**
+	 * A builder of {@code ConnectionProperties}.
+	 */
 	public static final class Builder {
 		private static final int DEFAULT_MAXIMUM_CONNECTION_ATTEMPTS = 5;
 		private static final int DEFAULT_MAXIMUM_READINESS_ATTEMPTS = 5;
