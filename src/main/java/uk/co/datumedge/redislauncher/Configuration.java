@@ -36,7 +36,7 @@ public final class Configuration {
 	 * non-default port, the configuration builder must be configured with the same port. If no {@code redis.conf} file
 	 * is specified on the {@code CommandLine}, {@code redis-server} will use the default configuration.
 	 *
-	 * <h3>Examples</h3>
+	 * <h6>Examples</h6>
 	 * Create a configuration with no explicit configuration file which accepts connections on the default port 6379:
 	 *
 	 * <pre>
