@@ -1,14 +1,16 @@
 package uk.co.datumedge.redislauncher;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static uk.co.datumedge.redislauncher.Configuration.programmaticConfiguration;
 import static uk.co.datumedge.redislauncher.Configuration.staticConfiguration;
 import static uk.co.datumedge.redislauncher.Execution.anExecution;
+import static uk.co.datumedge.redislauncher.Matchers.containsBytes;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -42,7 +44,7 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 @RunWith(JMock.class)
-public class LocalRedisServerTest {
+public final class LocalRedisServerTest {
 	private static final int TIMEOUT = 60000;
 	private final Mockery context = new JUnit4Mockery();
 	private final LifecyclePolicy mockLifecyclePolicy = context.mock(LifecyclePolicy.class);
@@ -435,10 +437,6 @@ public class LocalRedisServerTest {
 		}
 	}
 
-	private void pingServer() {
-		pingAndDisconnect(new Jedis("localhost"));
-	}
-
 	private void invokeMBeanOperation(String operation) throws ReflectionException, InstanceNotFoundException, MBeanException {
 		mBeanServer.invoke(objectName, operation, new Object[0], new String[0]);
 	}
@@ -479,7 +477,7 @@ public class LocalRedisServerTest {
 	@Test
 	public void startsServerOnNonDefaultPort() throws IOException, InterruptedException {
 		int port = 6380;
-		LocalRedisServer server = new LocalRedisServer(anExecution()
+		RedisServer server = new LocalRedisServer(anExecution()
 				.withConfiguration((programmaticConfiguration().withPort(port).build()))
 				.build());
 		try {
@@ -488,6 +486,24 @@ public class LocalRedisServerTest {
 		} finally {
 			server.stop();
 		}
+	}
+
+	// TODO: make this test belong to Execution
+	@Test
+	public void writesProcessStdOutToOutputStream() throws IOException, InterruptedException {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		RedisServer server = new LocalRedisServer(anExecution().withOutputStream(outputStream).build());
+		try {
+			server.start();
+			pingServer();
+			assertThat(outputStream, containsBytes());
+		} finally {
+			server.stop();
+		}
+	}
+
+	private void pingServer() {
+		pingAndDisconnect(new Jedis("localhost"));
 	}
 
 	private void pingAndDisconnect(Jedis jedis) {

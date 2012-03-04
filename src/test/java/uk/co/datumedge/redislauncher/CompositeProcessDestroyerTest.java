@@ -14,7 +14,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
-public class CompositeProcessDestroyerTest {
+public final class CompositeProcessDestroyerTest {
 	private final Mockery context = new JUnit4Mockery();
 	private final ProcessDestroyer delegateProcessDestroyer1 = context.mock(ProcessDestroyer.class, "delegateProcessDestroyer1");
 	private final ProcessDestroyer delegateProcessDestroyer2 = context.mock(ProcessDestroyer.class, "delegateProcessDestroyer2");

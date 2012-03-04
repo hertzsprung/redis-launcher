@@ -4,7 +4,7 @@ import static uk.co.datumedge.redislauncher.Execution.anExecution;
 
 import java.io.IOException;
 
-public class ForkedRedisServer {
+public final class ForkedRedisServer {
 	public static void main(String[] args) {
 		try {
 			LocalRedisServer redisServer = new LocalRedisServer(

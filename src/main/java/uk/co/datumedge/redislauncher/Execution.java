@@ -15,17 +15,19 @@ import org.apache.commons.exec.PumpStreamHandler;
  * An execution of a redis server.  Used by a {@link LocalRedisServer} to start and stop a redis server process.
  */
 public final class Execution {
-	private static final OutputStream IGNORED_OUTPUT_STREAM = null;
-	private static final OutputStream IGNORED_ERROR_STREAM = null;
 	private ExecutionProcessDestroyer executionProcessDestroyer;
+	private final OutputStream outputStream;
+	private final OutputStream errorStream;
 	final Configuration configuration;
 
 	public static Builder anExecution() {
 		return new Builder();
 	}
 
-	private Execution(Configuration configuration) {
+	private Execution(Configuration configuration, OutputStream outputStream, OutputStream errorStream) {
 		this.configuration = configuration;
+		this.outputStream = outputStream;
+		this.errorStream = errorStream;
 	}
 
 	DefaultExecuteResultHandler start(ProcessDestroyer lifecyleProcessDestroyer) throws IOException {
@@ -35,8 +37,8 @@ public final class Execution {
 		executor.setProcessDestroyer(new CompositeProcessDestroyer(
 				this.executionProcessDestroyer, lifecyleProcessDestroyer));
 		executor.setStreamHandler(new PumpStreamHandler(
-				IGNORED_OUTPUT_STREAM,
-				IGNORED_ERROR_STREAM,
+				outputStream,
+				errorStream,
 				configuration.inputStream()));
 		executor.execute(configuration.commandLine(), handler);
 		return handler;
@@ -53,11 +55,23 @@ public final class Execution {
 	 */
 	public static final class Builder {
 		private Configuration configuration;
+		private OutputStream outputStream;
+		private OutputStream errorStream;
 
 		private Builder() { }
 
 		public Builder withConfiguration(Configuration configuration) {
 			this.configuration = configuration;
+			return this;
+		}
+		
+		public Builder withOutputStream(OutputStream outputStream) {
+			this.outputStream = outputStream;
+			return this;
+		}
+		
+		public Builder withErrorStream(OutputStream errorStream) {
+			this.errorStream = errorStream;
 			return this;
 		}
 
@@ -67,7 +81,7 @@ public final class Execution {
 		 */
 		public Execution build() {
 			if (configuration == null) configuration = defaultConfiguration();
-			return new Execution(configuration);
+			return new Execution(configuration, outputStream, errorStream);
 		}
 	}
 }

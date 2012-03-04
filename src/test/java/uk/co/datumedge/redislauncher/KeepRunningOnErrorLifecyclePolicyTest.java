@@ -8,7 +8,7 @@ import java.io.IOException;
 
 import org.junit.Test;
 
-public class KeepRunningOnErrorLifecyclePolicyTest {
+public final class KeepRunningOnErrorLifecyclePolicyTest {
 	private static final RedisServer IGNORED_REDIS_SERVER = null;
 	private final LifecyclePolicy lifecyclePolicy = new KeepRunningOnErrorLifecyclePolicy();
 

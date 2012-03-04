@@ -15,7 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
-public class AlwaysDestroyLifecyclePolicyTest {
+public final class AlwaysDestroyLifecyclePolicyTest {
 	private final Mockery context = new JUnit4Mockery();
 	private final RedisServer server = context.mock(RedisServer.class);
 	private final LifecyclePolicy lifecyclePolicy = new AlwaysDestroyLifecyclePolicy();

@@ -13,7 +13,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
-public class ExecutionProcessDestroyerTest {
+public final class ExecutionProcessDestroyerTest {
 	private final Mockery context = new JUnit4Mockery() {{
 		setImposteriser(ClassImposteriser.INSTANCE);
 	}};

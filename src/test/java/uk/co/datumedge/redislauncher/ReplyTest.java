@@ -10,7 +10,7 @@ import java.nio.charset.Charset;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ReplyTest {
+public final class ReplyTest {
 	@Test
 	public void returnsReplyWithoutCarriageReturnAndNewLineCharacters() throws IOException {
 		Reply reply = new Reply(inputStreamFor("+PONG\r\n"));
