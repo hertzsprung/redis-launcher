@@ -52,6 +52,7 @@
         <!-- \s matches whitespace character, $ matches end of line. -->
         <property name="format" value="\s+$"/>
         <property name="message" value="Line has trailing spaces."/>
+        <property name="severity" value="warning"/>
     </module>
     
     <module name="FileLength">
