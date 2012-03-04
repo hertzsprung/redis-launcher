@@ -1,5 +1,7 @@
 package uk.co.datumedge.redislauncher;
 
+import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
+
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -18,13 +20,11 @@ public final class Execution {
 	private ExecutionProcessDestroyer executionProcessDestroyer;
 	final Configuration configuration;
 
-	/**
-	 * Constructs a new {@code Execution} instance using the {@code configuration}.
-	 *
-	 * @param configuration
-	 *            an {@code Configuration} instance
-	 */
-	public Execution(Configuration configuration) {
+	public static Builder anExecution() {
+		return new Builder();
+	}
+
+	private Execution(Configuration configuration) {
 		this.configuration = configuration;
 	}
 
@@ -45,6 +45,29 @@ public final class Execution {
 	void destroy() {
 		if (executionProcessDestroyer != null) {
 			executionProcessDestroyer.destroy();
+		}
+	}
+	
+	/**
+	 * A builder of {@code Execution} instances.
+	 */
+	public static final class Builder {
+		private Configuration configuration;
+
+		private Builder() { }
+
+		public Builder withConfiguration(Configuration configuration) {
+			this.configuration = configuration;
+			return this;
+		}
+
+		/**
+		 * @return an {@code Execution} instance
+		 * @throws NullPointerException
+		 */
+		public Execution build() {
+			if (configuration == null) configuration = defaultConfiguration();
+			return new Execution(configuration);
 		}
 	}
 }

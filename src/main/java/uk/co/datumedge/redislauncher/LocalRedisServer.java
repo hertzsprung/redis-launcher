@@ -1,6 +1,6 @@
 package uk.co.datumedge.redislauncher;
 
-import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
+import static uk.co.datumedge.redislauncher.Execution.anExecution;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +51,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 *             if the {@code redislauncher.command} system property does not exist
 	 */
 	public static LocalRedisServer newInstance() {
-		return new LocalRedisServer(new Execution(defaultConfiguration()));
+		return new LocalRedisServer(anExecution().build());
 	}
 
 	/**

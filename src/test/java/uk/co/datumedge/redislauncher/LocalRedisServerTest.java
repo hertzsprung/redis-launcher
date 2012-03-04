@@ -5,9 +5,9 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static uk.co.datumedge.redislauncher.Configuration.defaultConfiguration;
 import static uk.co.datumedge.redislauncher.Configuration.programmaticConfiguration;
 import static uk.co.datumedge.redislauncher.Configuration.staticConfiguration;
+import static uk.co.datumedge.redislauncher.Execution.anExecution;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +52,7 @@ public class LocalRedisServerTest {
 	private final ObjectName objectName;
 
 	public LocalRedisServerTest() throws MalformedObjectNameException {
-		execution = new Execution(defaultConfiguration());
+		execution = anExecution().build();
 		server = new LocalRedisServer(execution);
 		objectName = new ObjectName("uk.co.datumedge.redislauncher:type=LocalRedisServer,name=Test");
 	}
@@ -173,10 +173,6 @@ public class LocalRedisServerTest {
 		}
 	}
 
-	private Execution invalidCommand() {
-		return new Execution(staticConfiguration().withCommandLine(new CommandLine("java")).build());
-	}
-
 	@Test
 	public void callsLifecyclePolicyWhenFailedToConnect() throws IOException, InterruptedException {
 		ConnectionProperties connectionProperties = new ConnectionProperties.Builder()
@@ -184,7 +180,7 @@ public class LocalRedisServerTest {
 			.build();
 
 		final RedisServer server = new LocalRedisServer(
-				new Execution(staticConfiguration().withCommandLine(new CommandLine("java")).build()),
+				invalidCommand(),
 				connectionProperties,
 				mockLifecyclePolicy);
 
@@ -204,6 +200,12 @@ public class LocalRedisServerTest {
 				// ignore
 			}
 		}
+	}
+
+	private Execution invalidCommand() {
+		return anExecution()
+				.withConfiguration((staticConfiguration().withCommandLine(new CommandLine("java")).build()))
+				.build();
 	}
 
 	@Test
@@ -477,7 +479,9 @@ public class LocalRedisServerTest {
 	@Test
 	public void startsServerOnNonDefaultPort() throws IOException, InterruptedException {
 		int port = 6380;
-		LocalRedisServer server = new LocalRedisServer(new Execution(programmaticConfiguration().withPort(port).build()));
+		LocalRedisServer server = new LocalRedisServer(anExecution()
+				.withConfiguration((programmaticConfiguration().withPort(port).build()))
+				.build());
 		try {
 			server.start();
 			pingAndDisconnect(new Jedis("localhost", port));
