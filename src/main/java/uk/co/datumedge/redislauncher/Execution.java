@@ -20,6 +20,11 @@ public final class Execution {
 	private final OutputStream errorStream;
 	final Configuration configuration;
 
+	/**
+	 * Creates an {@code Execution} builder.
+	 *
+	 * @return an {@code Execution} builder instance
+	 */
 	public static Builder anExecution() {
 		return new Builder();
 	}
@@ -49,7 +54,7 @@ public final class Execution {
 			executionProcessDestroyer.destroy();
 		}
 	}
-	
+
 	/**
 	 * A builder of {@code Execution} instances.
 	 */
@@ -60,24 +65,45 @@ public final class Execution {
 
 		private Builder() { }
 
+		/**
+		 * Sets the {@code Configuration} used by the builder.
+		 *
+		 * @return the updated builder
+		 */
 		public Builder withConfiguration(Configuration configuration) {
 			this.configuration = configuration;
 			return this;
 		}
-		
+
+		/**
+		 * Sets the {@code OutputStream} to which {@code stdout} is sent.
+		 *
+		 * @return the updated builder
+		 */
 		public Builder withOutputStream(OutputStream outputStream) {
 			this.outputStream = outputStream;
 			return this;
 		}
-		
+
+		/**
+		 * Sets the {@code OutputStream} to which {@code stderr} is sent.
+		 *
+		 * @return the updated builder
+		 */
 		public Builder withErrorStream(OutputStream errorStream) {
 			this.errorStream = errorStream;
 			return this;
 		}
 
 		/**
+		 * Creates an {@code Execution} instance from the current builder. If no {@code Configuration} was specified,
+		 * {@linkplain Configuration.Builder#build() default configuration} is used. If no {@code outputStream} was
+		 * specified, {@code stdout} is swallowed. If no {@code errorStream} was specified, {@code stderr} is swallowed.
+		 *
 		 * @return an {@code Execution} instance
 		 * @throws NullPointerException
+		 *             if no {@code Configuration} was specified and the {@code redislauncher.command} system
+		 *             property does not exist
 		 */
 		public Execution build() {
 			if (configuration == null) configuration = defaultConfiguration();
