@@ -30,7 +30,6 @@ final class CompositeProcessDestroyer implements ProcessDestroyer {
 
 	@Override
 	public int size() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException();
+		return -1;
 	}
 }
