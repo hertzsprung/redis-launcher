@@ -19,7 +19,7 @@ public final class AlwaysDestroyLifecyclePolicy implements LifecyclePolicy {
 	 * {@inheritDoc} This implementation destroys the {@code redisServer}.
 	 */
 	@Override
-	public void failedToStop(RedisServer redisServer) {
+	public void failedToStop(RedisServer redisServer, Throwable cause) throws FailedToStopException {
 		redisServer.destroy();
 	}
 

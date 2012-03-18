@@ -16,6 +16,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
 public final class AlwaysDestroyLifecyclePolicyTest {
+	private static final Throwable IGNORED_CAUSE = null;
 	private final Mockery context = new JUnit4Mockery();
 	private final RedisServer server = context.mock(RedisServer.class);
 	private final LifecyclePolicy lifecyclePolicy = new AlwaysDestroyLifecyclePolicy();
@@ -29,7 +30,7 @@ public final class AlwaysDestroyLifecyclePolicyTest {
 	@Test
 	public void destroysServerOnFailureToStop() throws IOException {
 		expectServerDestroy();
-		lifecyclePolicy.failedToStop(server);
+		lifecyclePolicy.failedToStop(server, IGNORED_CAUSE);
 	}
 
 	@Test

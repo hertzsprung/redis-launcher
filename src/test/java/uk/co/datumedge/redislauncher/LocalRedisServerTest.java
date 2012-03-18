@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
@@ -29,6 +30,7 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.ExecuteWatchdog;
+import org.hamcrest.Matchers;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -348,7 +350,7 @@ public final class LocalRedisServerTest {
 
 		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			oneOf(mockLifecyclePolicy).failedToStop(server);
+			oneOf(mockLifecyclePolicy).failedToStop(with(server), with(Matchers.<Throwable>instanceOf(TimeoutException.class)));
 		}});
 
 		try {
@@ -368,7 +370,7 @@ public final class LocalRedisServerTest {
 
 		allowingMockLifecyclePolicyReturnsNullProcessDestroyer();
 		context.checking(new Expectations() {{
-			oneOf(mockLifecyclePolicy).failedToStop(server);
+			oneOf(mockLifecyclePolicy).failedToStop(with(server), with(Matchers.<Throwable>instanceOf(ConnectException.class)));
 		}});
 
 		Jedis jedis = null;

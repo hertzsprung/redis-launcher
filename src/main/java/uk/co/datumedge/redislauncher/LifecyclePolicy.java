@@ -13,15 +13,18 @@ public interface LifecyclePolicy {
 	 *            the server which failed to start
 	 */
 	void failedToStart(RedisServer redisServer);
-	
+
 	/**
 	 * Invoked when the server failed to stop, or it could not be determined that the server has stopped.
 	 *
 	 * @param redisServer
 	 *            the server which failed to start
-	 * @throws FailedToStopException optionally thrown by the implementing class
+	 * @param cause
+	 *            the cause
+	 * @throws FailedToStopException
+	 *             optionally thrown by the implementing class
 	 */
-	void failedToStop(RedisServer redisServer) throws FailedToStopException;
+	void failedToStop(RedisServer ignoredRedisServer, Throwable cause) throws FailedToStopException;
 
 	/**
 	 * Get a {@code ProcessDestroyer} that can be used to destroy a redis server outside of its normal lifecycle. This

@@ -31,7 +31,8 @@ public final class ConnectionProperties {
 	 */
 	public final long shutdownTimeoutMillis;
 
-	private ConnectionProperties(int maximumConnectionAttempts, int maximumReadinessAttempts, long shutdownTimeoutMillis) {
+	private ConnectionProperties(int maximumConnectionAttempts, int maximumReadinessAttempts,
+			long shutdownTimeoutMillis) {
 		this.maximumConnectionAttempts = maximumConnectionAttempts;
 		this.maximumReadinessAttempts = maximumReadinessAttempts;
 		this.shutdownTimeoutMillis = shutdownTimeoutMillis;

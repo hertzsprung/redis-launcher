@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.exec.DefaultExecuteResultHandler;
 
@@ -172,8 +173,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 			os.write("*1\r\n$8\r\nSHUTDOWN\r\n".getBytes("UTF-8"));
 			os.flush();
 		} catch (IOException e) {
-			// TODO: don't lose the exception
-			lifecyclePolicy.failedToStop(this);
+			lifecyclePolicy.failedToStop(this, e);
 		} finally {
 			socket.close();
 		}
@@ -191,10 +191,11 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 		try {
 			executionResultHandler.waitFor(connectionProperties.shutdownTimeoutMillis);
 			if (!executionResultHandler.hasResult()) {
-				lifecyclePolicy.failedToStop(this);
+				lifecyclePolicy.failedToStop(this, new TimeoutException("Process did not exit after " +
+						connectionProperties.shutdownTimeoutMillis + " milliseconds"));
 			}
 		} catch (InterruptedException e) {
-			lifecyclePolicy.failedToStop(this);
+			lifecyclePolicy.failedToStop(this, e);
 			throw e;
 		}
 	}

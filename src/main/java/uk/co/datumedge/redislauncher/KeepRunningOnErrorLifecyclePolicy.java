@@ -20,8 +20,8 @@ public final class KeepRunningOnErrorLifecyclePolicy implements LifecyclePolicy 
 	 *             always thrown when this method is invoked
 	 */
 	@Override
-	public void failedToStop(RedisServer redisServer) throws FailedToStopException {
-		throw new FailedToStopException("Failed to stop redis server");
+	public void failedToStop(RedisServer redisServer, Throwable cause) throws FailedToStopException {
+		throw new FailedToStopException("Failed to stop redis server", cause);
 	}
 
 	@Override
