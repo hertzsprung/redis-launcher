@@ -8,6 +8,12 @@ import java.io.IOException;
 public final class FailedToStopException extends IOException {
 	private static final long serialVersionUID = -4300622288855492173L;
 
+	/**
+	 * Constructs a {@code FailedToStopException} with the specified detail message.
+	 *
+	 * @param message
+	 *            the detail message
+	 */
 	public FailedToStopException(String message) {
 		super(message);
 	}

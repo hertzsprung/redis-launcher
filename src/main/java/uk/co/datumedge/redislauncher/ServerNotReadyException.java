@@ -8,6 +8,12 @@ import java.io.IOException;
 public final class ServerNotReadyException extends IOException {
 	private static final long serialVersionUID = -8014288142356052567L;
 
+	/**
+	 * Constructs a {@code ServerNotReadyException} with the specified detail message.
+	 *
+	 * @param message
+	 *            the detail message
+	 */
 	public ServerNotReadyException(String message) {
 		super(message);
 	}

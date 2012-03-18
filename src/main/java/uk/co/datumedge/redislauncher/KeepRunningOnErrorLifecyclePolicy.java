@@ -1,7 +1,5 @@
 package uk.co.datumedge.redislauncher;
 
-import java.io.IOException;
-
 import org.apache.commons.exec.ProcessDestroyer;
 
 /**
@@ -16,10 +14,13 @@ public final class KeepRunningOnErrorLifecyclePolicy implements LifecyclePolicy 
 	}
 
 	/**
-	 * Always throws a {@code FailedToStopException}.
+	 * {@inheritDoc}
+	 *
+	 * @throws FailedToStopException
+	 *             always thrown when this method is invoked
 	 */
 	@Override
-	public void failedToStop(RedisServer redisServer) throws IOException {
+	public void failedToStop(RedisServer redisServer) throws FailedToStopException {
 		throw new FailedToStopException("Failed to stop redis server");
 	}
 
