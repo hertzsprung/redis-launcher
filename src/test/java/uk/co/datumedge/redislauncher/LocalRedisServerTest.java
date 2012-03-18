@@ -102,7 +102,7 @@ public final class LocalRedisServerTest {
 
 	@Test
 	public void canStartServerInstantiatedUsingSystemProperty() throws IOException, InterruptedException {
-		LocalRedisServer server = LocalRedisServer.newInstance();
+		RedisServer server = LocalRedisServer.newInstance();
 		try {
 			server.start();
 		} finally {

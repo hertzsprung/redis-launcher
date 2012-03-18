@@ -51,7 +51,7 @@ public final class LocalRedisServer implements RedisServer, LocalRedisServerMBea
 	 * @throws NullPointerException
 	 *             if the {@code redislauncher.command} system property does not exist
 	 */
-	public static LocalRedisServer newInstance() {
+	public static RedisServer newInstance() {
 		return new LocalRedisServer(anExecution().build());
 	}
 
