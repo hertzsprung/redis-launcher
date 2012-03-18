@@ -129,7 +129,7 @@ public final class LocalRedisServerTest {
 			jedis = new Jedis("localhost");
 			assertThat(jedis.ping(), is("PONG"));
 		} finally {
-			jedis.disconnect();
+			if (jedis != null) jedis.disconnect();
 		}
 	}
 
@@ -422,7 +422,7 @@ public final class LocalRedisServerTest {
 			jedis = new Jedis("localhost");
 			assertThat(jedis.ping(), is("PONG"));
 		} finally {
-			jedis.disconnect();
+			if (jedis != null) jedis.disconnect();
 			server.stop();
 		}
 	}
