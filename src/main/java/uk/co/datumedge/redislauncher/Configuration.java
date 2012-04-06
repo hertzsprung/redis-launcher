@@ -1,22 +1,21 @@
 package uk.co.datumedge.redislauncher;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.exec.CommandLine;
 
 /**
  * Configuration for a redis server.
  */
-public final class Configuration {
+public class Configuration {
 	/**
 	 * A system property key to specify the path to a {@code redis-server} executable.
 	 */
 	public static final String COMMAND_PROPERTY = "redislauncher.command";
 
-	private final boolean programmatic;
 	private final CommandLine commandLine;
 
 	/**
@@ -24,8 +23,7 @@ public final class Configuration {
 	 */
 	public final int port;
 
-	private Configuration(boolean programmatic, CommandLine commandLine, int port) {
-		this.programmatic = programmatic;
+	Configuration(CommandLine commandLine, int port) {
 		this.commandLine = commandLine;
 		this.port = port;
 	}
@@ -64,10 +62,18 @@ public final class Configuration {
 	 * configuration is passed to the process over {@code stdin}. No {@code redis.conf} file must be passed as a
 	 * {@code CommandLine} argument when using programmatic configuration.
 	 *
+	 * <h6>Example</h6>
+	 * <pre>
+	 * Configuration configuration = programmaticConfiguration()
+	 * 	.withPort(6380)
+	 * 	.withProperty("rdbcompression", "yes")
+	 * 	.build();
+	 * </pre>
+	 *
 	 * @return a {@code Configuration} builder instance
 	 */
-	public static Builder programmaticConfiguration() {
-		return new Builder().isProgrammatic();
+	public static ProgrammaticBuilder programmaticConfiguration() {
+		return new ProgrammaticBuilder();
 	}
 
 	static Configuration defaultConfiguration() {
@@ -75,42 +81,29 @@ public final class Configuration {
 	}
 
 	CommandLine commandLine() throws IOException {
-		CommandLine commandLine = new CommandLine(this.commandLine);
-		if (programmatic) commandLine.addArgument("-");
-		return commandLine;
+		return new CommandLine(this.commandLine);
 	}
 
 	InputStream inputStream() {
-		if (programmatic) {
-			// TODO: don't hardwire these configuration parameters here
-			return new ByteArrayInputStream(("port " + port + "\nsave 60 10000\ndbfilename dump.rdb\ndir ./").getBytes(Charset.forName("UTF-8")));
-		} else {
-			return null;
-		}
+		return null;
 	}
 
 	/**
 	 * A builder of {@code Configuration} instances.
 	 */
-	public static final class Builder {
+	public static class Builder {
 		private static final int DEFAULT_PORT = 6379;
-		private CommandLine commandLine;
-		private int port = DEFAULT_PORT;
-		private boolean programmatic;
+		protected CommandLine commandLine;
+		protected int port = DEFAULT_PORT;
 
 		private Builder() { }
-
-		Builder isProgrammatic() {
-			this.programmatic = true;
-			return this;
-		}
 
 		/**
 		 * Sets the {@code CommandLine} used to launch the redis server process.
 		 *
 		 * @return the updated builder
 		 */
-		public Builder withCommandLine(CommandLine commandLine) {
+		public final Builder withCommandLine(CommandLine commandLine) {
 			this.commandLine = commandLine;
 			return this;
 		}
@@ -120,7 +113,7 @@ public final class Configuration {
 		 *
 		 * @return the updated builder
 		 */
-		public Builder withPort(int port) {
+		public final Builder withPort(int port) {
 			this.port = port;
 			return this;
 		}
@@ -136,8 +129,12 @@ public final class Configuration {
 		 *             property does not exist
 		 */
 		public Configuration build() {
+			useDefaultIfCommandLineNotSpecified();
+			return new Configuration(commandLine, port);
+		}
+
+		protected final void useDefaultIfCommandLineNotSpecified() {
 			if (commandLine == null) commandLine = defaultCommandLine();
-			return new Configuration(programmatic, commandLine, port);
 		}
 
 		private CommandLine defaultCommandLine() {
@@ -147,6 +144,36 @@ public final class Configuration {
 						" system property must be a path to a redis-server executable");
 			}
 			return new CommandLine(command);
+		}
+	}
+	
+	public final static class ProgrammaticBuilder extends Builder {
+		private final Map<String, String> properties = new HashMap<String, String>();
+
+		private ProgrammaticBuilder() { }
+
+		@Override
+		public Configuration build() {
+			useDefaultIfCommandLineNotSpecified();
+			return new ProgrammaticConfiguration(commandLine, port, properties);
+		}
+
+		/**
+		 * Add a {@code redis.conf} property to the configuration. The port property must be specified with
+		 * {@link Builder#withPort(int)}.
+		 *
+		 * @param key
+		 *            the property key
+		 * @param value
+		 *            the property value
+		 * @return the updated builder
+		 * @throws IllegalArgumentException
+		 *             if the key was {@code port}
+		 */
+		public ProgrammaticBuilder withProperty(String key, String value) {
+			if ("port".equals(key)) {throw new IllegalArgumentException("port must be specified using Configuration.Builder.withPort(int)");
+			properties.put(key, value);
+			return this;
 		}
 	}
 }
