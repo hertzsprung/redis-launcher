@@ -93,8 +93,8 @@ public class Configuration {
 	 */
 	public static class Builder {
 		private static final int DEFAULT_PORT = 6379;
-		protected CommandLine commandLine;
-		protected int port = DEFAULT_PORT;
+		CommandLine commandLine;
+		int port = DEFAULT_PORT;
 
 		private Builder() { }
 
@@ -133,7 +133,7 @@ public class Configuration {
 			return new Configuration(commandLine, port);
 		}
 
-		protected final void useDefaultIfCommandLineNotSpecified() {
+		final void useDefaultIfCommandLineNotSpecified() {
 			if (commandLine == null) commandLine = defaultCommandLine();
 		}
 
@@ -147,6 +147,11 @@ public class Configuration {
 		}
 	}
 	
+	/**
+	 * A builder of {@code Configuration} instances that are configured programmatically.
+	 *
+	 * @see Configuration#programmaticConfiguration()
+	 */
 	public final static class ProgrammaticBuilder extends Builder {
 		private final Map<String, String> properties = new HashMap<String, String>();
 
@@ -171,7 +176,7 @@ public class Configuration {
 		 *             if the key was {@code port}
 		 */
 		public ProgrammaticBuilder withProperty(String key, String value) {
-			if ("port".equals(key)) {throw new IllegalArgumentException("port must be specified using Configuration.Builder.withPort(int)");
+			if ("port".equals(key)) throw new IllegalArgumentException("port must be specified using Configuration.Builder.withPort(int)");
 			properties.put(key, value);
 			return this;
 		}
