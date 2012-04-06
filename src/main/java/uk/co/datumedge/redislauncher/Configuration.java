@@ -146,13 +146,13 @@ public class Configuration {
 			return new CommandLine(command);
 		}
 	}
-	
+
 	/**
 	 * A builder of {@code Configuration} instances that are configured programmatically.
 	 *
 	 * @see Configuration#programmaticConfiguration()
 	 */
-	public final static class ProgrammaticBuilder extends Builder {
+	public static final class ProgrammaticBuilder extends Builder {
 		private final Map<String, String> properties = new HashMap<String, String>();
 
 		private ProgrammaticBuilder() { }
