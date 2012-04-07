@@ -8,9 +8,8 @@ import static org.junit.Assert.fail;
 import static uk.co.datumedge.redislauncher.Configuration.programmaticConfiguration;
 import static uk.co.datumedge.redislauncher.Configuration.staticConfiguration;
 import static uk.co.datumedge.redislauncher.Execution.anExecution;
-import static uk.co.datumedge.redislauncher.Matchers.containsBytes;
+import static uk.co.datumedge.redislauncher.JavaCommandLine.javaCommandLine;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -446,16 +445,11 @@ public final class LocalRedisServerTest {
 	@Test(expected=JedisConnectionException.class)
 	public void stopsServerWhenJavaProcessIsKilled() throws IOException, InterruptedException {
 		try {
-			CommandLine commandLine = new CommandLine("java")
-					.addArguments(new String[]{"-cp", System.getProperty("java.class.path")})
-					.addArgument(String.format("-D%s=%s", Configuration.COMMAND_PROPERTY, System.getProperty(Configuration.COMMAND_PROPERTY)))
-					.addArgument(ForkedRedisServer.class.getCanonicalName());
-
 			DefaultExecutor executor = new DefaultExecutor();
 			ExecuteWatchdog watchdog = new ExecuteWatchdog(1000L);
 			executor.setWatchdog(watchdog);
 			try {
-				executor.execute(commandLine);
+				executor.execute(commandLineFor(ForkedRedisServer.class));
 				fail("Expected watchdog to terminate process");
 			} catch (ExecuteException e) {
 				assertThat(watchdog.killedProcess(), is(true));
@@ -476,6 +470,12 @@ public final class LocalRedisServerTest {
 		}
 	}
 
+	private CommandLine commandLineFor(Class<ForkedRedisServer> mainClass) {
+		return javaCommandLine()
+				.addArgument(String.format("-D%s=%s", Configuration.COMMAND_PROPERTY, System.getProperty(Configuration.COMMAND_PROPERTY)))
+				.addArgument(mainClass.getCanonicalName());
+	}
+
 	@Test
 	public void startsServerOnNonDefaultPort() throws IOException, InterruptedException {
 		int port = 6380;
@@ -485,20 +485,6 @@ public final class LocalRedisServerTest {
 		try {
 			server.start();
 			pingAndDisconnect(new Jedis("localhost", port));
-		} finally {
-			server.stop();
-		}
-	}
-
-	// TODO: make this test belong to Execution
-	@Test
-	public void writesProcessStdOutToOutputStream() throws IOException, InterruptedException {
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		RedisServer server = new LocalRedisServer(anExecution().withOutputStream(outputStream).build());
-		try {
-			server.start();
-			pingServer();
-			assertThat(outputStream, containsBytes());
 		} finally {
 			server.stop();
 		}

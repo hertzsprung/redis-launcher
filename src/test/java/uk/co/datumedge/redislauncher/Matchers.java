@@ -10,7 +10,12 @@ import org.hamcrest.TypeSafeMatcher;
 import com.google.common.primitives.Bytes;
 
 final class Matchers {
-	static Matcher<ByteArrayOutputStream> containsBytes() {
+	/**
+	 * Evaluates to true if the {@code ByteArrayOutputStream} is not empty.
+	 *
+	 * @return a {@code Matcher} instance
+	 */
+	public static Matcher<ByteArrayOutputStream> containsBytes() {
 		return new TypeSafeDiagnosingMatcher<ByteArrayOutputStream>() {
 			@Override
 			public void describeTo(Description description) {
@@ -26,6 +31,13 @@ final class Matchers {
 		};
 	}
 
+	/**
+	 * Evaluates to true if the expected byte array appears somewhere within the actual byte array.
+	 *
+	 * @param expected
+	 *            the expected byte array instance
+	 * @return a {@code Matcher} instance
+	 */
 	public static Matcher<byte[]> containsBytes(final byte[] expected) {
 		return new TypeSafeMatcher<byte[]>() {
 			@Override
