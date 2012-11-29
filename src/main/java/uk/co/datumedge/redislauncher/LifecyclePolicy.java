@@ -24,7 +24,7 @@ public interface LifecyclePolicy {
 	 * @throws FailedToStopException
 	 *             optionally thrown by the implementing class
 	 */
-	void failedToStop(RedisServer ignoredRedisServer, Throwable cause) throws FailedToStopException;
+	void failedToStop(RedisServer redisServer, Throwable cause) throws FailedToStopException;
 
 	/**
 	 * Get a {@code ProcessDestroyer} that can be used to destroy a redis server outside of its normal lifecycle. This
